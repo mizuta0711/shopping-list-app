@@ -95,24 +95,45 @@ export const useShoppingStore = create<ShoppingState & ShoppingActions>()(
         const trimmed = name.trim();
         if (!trimmed) return;
         const now = new Date().toISOString();
-        set((state) => ({
-          items: [
-            ...state.items,
-            buildItem(trimmed, scope, nextOrder(state.items, scope), now),
-          ],
-        }));
+        set((state) => {
+          const isDuplicate = state.items.some(
+            (item) =>
+              item.name === trimmed &&
+              item.scope === scope &&
+              item.status === "PENDING",
+          );
+          if (isDuplicate) return state;
+          return {
+            items: [
+              ...state.items,
+              buildItem(trimmed, scope, nextOrder(state.items, scope), now),
+            ],
+          };
+        });
       },
 
       addItems: (names, scope = "TODAY") => {
         const now = new Date().toISOString();
         set((state) => {
-          const trimmedNames = names
-            .map((n) => n.trim())
-            .filter((n) => n.length > 0);
-          if (trimmedNames.length === 0) return state;
+          const existingPendingNames = new Set(
+            state.items
+              .filter((i) => i.scope === scope && i.status === "PENDING")
+              .map((i) => i.name),
+          );
+          const seenInBatch = new Set<string>();
+          const trimmedFiltered: string[] = [];
+          for (const raw of names) {
+            const n = raw.trim();
+            if (n.length === 0) continue;
+            if (existingPendingNames.has(n)) continue;
+            if (seenInBatch.has(n)) continue;
+            seenInBatch.add(n);
+            trimmedFiltered.push(n);
+          }
+          if (trimmedFiltered.length === 0) return state;
 
           const startOrder = nextOrder(state.items, scope);
-          const newItems = trimmedNames.map((n, i) =>
+          const newItems = trimmedFiltered.map((n, i) =>
             buildItem(n, scope, startOrder + i, now),
           );
           return { items: [...state.items, ...newItems] };

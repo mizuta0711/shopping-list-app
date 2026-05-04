@@ -36,7 +36,8 @@ export const AddItemForm = memo<Props>(function AddItemForm({ scope }) {
     (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       if (value.trim().length === 0) return;
-      const names = value.split("\n");
+      // 改行 / 句点（。）/ 読点（、）を区切り文字として扱う
+      const names = value.split(/[\n、。]/);
       addItems(names, scope);
       setValue("");
     },

@@ -14,7 +14,7 @@
 
 | ストア | ファイルパス | persist キー | 主要状態 | 主要アクション |
 |---|---|---|---|---|
-| `useShoppingStore` | `src/features/shopping/stores/shoppingStore.ts` | `shopping-list-app:state` | items, sort, hasOnboarded | addItem, addItems, togglePurchased, moveScope, reorderItems, deleteItem, setSort, setHasOnboarded, reset |
+| `useShoppingStore` | `src/features/shopping/stores/shoppingStore.ts` | `shopping-list-app:state` | items, sort, hasOnboarded | addItem, addItems（同一 scope の PENDING に同名あれば自動スキップ）, togglePurchased, moveScope, reorderItems, deleteItem, setSort, setHasOnboarded, reset |
 
 セレクタは `src/features/{feature}/stores/selectors.ts` に純粋関数として分離する（テスト容易性 + UI 側で `useMemo` 化が容易）。
 

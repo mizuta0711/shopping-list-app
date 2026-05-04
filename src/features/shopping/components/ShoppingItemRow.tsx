@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, type MouseEvent } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import type { ItemScope, ShoppingItem } from "../types";
 
 type Props = {
@@ -30,13 +30,19 @@ export const ShoppingItemRow = memo<Props>(function ShoppingItemRow({
       <button
         type="button"
         onClick={() => onToggle(item.id)}
-        className="flex flex-1 items-center gap-3 px-4 py-4 text-left transition active:bg-gray-100"
+        className="group flex flex-1 items-center gap-3 px-4 py-3 text-left transition active:bg-gray-50"
         aria-label={`${item.name} を購入済みにする`}
       >
         <span
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-gray-300"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 transition group-active:bg-emerald-500"
           aria-hidden
-        />
+        >
+          <Check
+            className="h-5 w-5 text-gray-400 transition group-active:text-white"
+            strokeWidth={3}
+            aria-hidden
+          />
+        </span>
         <span className="flex-1 truncate text-base text-gray-900">
           {item.name}
         </span>
