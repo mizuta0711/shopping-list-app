@@ -3,7 +3,12 @@ import tseslint from "typescript-eslint";
 
 export default [
   {
-    ignores: [".next/**", "node_modules/**", "prisma/migrations/**"],
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+      "prisma/migrations/**",
+      ".claude/hooks/**",
+    ],
   },
   ...tseslint.configs.recommended,
   {
