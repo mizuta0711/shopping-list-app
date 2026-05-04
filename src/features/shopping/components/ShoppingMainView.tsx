@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { History, ShoppingCart } from "lucide-react";
+import { History, Settings, ShoppingCart } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -107,6 +107,13 @@ export function ShoppingMainView() {
           className="flex h-9 w-9 items-center justify-center rounded-full text-gray-700 transition active:bg-gray-100"
         >
           <History className="h-5 w-5" aria-hidden />
+        </Link>
+        <Link
+          href="/settings"
+          aria-label="設定を開く"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-gray-700 transition active:bg-gray-100"
+        >
+          <Settings className="h-5 w-5" aria-hidden />
         </Link>
       </header>
 
