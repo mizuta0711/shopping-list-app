@@ -36,21 +36,31 @@ const execAsync = promisify(exec);
  * 外部キー制約を考慮したテーブルエクスポート順序
  * 依存関係の少ないものから順に並べる
  *
- * TODO: プロジェクトのテーブルに合わせて設定
+ * Phase 9: Auth.js v5 標準モデル + アプリ固有モデル
+ * - User は他テーブルから参照されるので最初
+ * - VerificationToken は外部キーなしの独立テーブル
+ * - Account / Session / ShoppingItem / DeletionTombstone は User に FK
  */
 const ORDERED_TABLES: string[] = [
-  // "user",
-  // "userProfile",
+  "user",
+  "verificationToken",
+  "account",
+  "session",
+  "shoppingItem",
+  "deletionTombstone",
 ];
 
 /**
  * Prisma モデル名 → PostgreSQL テーブル名のマッピング
- *
- * TODO: プロジェクトのテーブルに合わせて設定
+ * Prisma はデフォルトで PascalCase のモデル名をそのまま PostgreSQL のテーブル名にする
  */
 const DB_TABLE_MAP: Record<string, string> = {
-  // user: 'public."User"',
-  // userProfile: 'public."UserProfile"',
+  user: 'public."User"',
+  account: 'public."Account"',
+  session: 'public."Session"',
+  verificationToken: 'public."VerificationToken"',
+  shoppingItem: 'public."ShoppingItem"',
+  deletionTombstone: 'public."DeletionTombstone"',
 };
 
 // ========================================

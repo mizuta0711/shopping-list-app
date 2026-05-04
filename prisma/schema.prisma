@@ -1,6 +1,6 @@
-// Prisma schema (initial template)
-// MVP は LocalStorage 管理のため DB は未使用。
-// 将来クラウド同期を実装する際にモデルを追加する。
+// Prisma schema
+// Phase 9: クラウド同期 + Auth.js v5 (next-auth@5)
+// 設計書: docs/features/20260504_phase9-cloud-sync.md §4-1
 
 generator client {
   provider = "prisma-client-js"
@@ -9,4 +9,96 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+/// ユーザー（Google OAuth で作成される）
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  shoppingItems ShoppingItem[]
+  tombstones    DeletionTombstone[]
+}
+
+/// OAuth プロバイダのアカウント情報（Auth.js 標準）
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String  /// "oauth" など
+  provider          String  /// "google"
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+/// データベースセッション（Auth.js 標準）
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// メール検証トークン（Auth.js 標準。Google OAuth のみなら未使用だが将来拡張のため定義）
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+/// 買い物アイテム（クラウド同期対象）
+/// id は `@default(uuid())` を使わずクライアント発行（オフライン編集時の衝突回避）
+/// updatedAt は `@updatedAt` を使わずクライアント発行値を保存（LWW 判定の主キー）
+model ShoppingItem {
+  id          String    @id /// クライアント発行 UUID v4
+  userId      String    /// 所有ユーザー
+  name        String    /// アイテム名
+  scope       String    /// "TODAY" | "LATER"
+  status      String    /// "PENDING" | "PURCHASED"
+  order       Int       /// 同一 scope 内の表示順
+  createdAt   DateTime  /// クライアント発行のタイムスタンプ
+  updatedAt   DateTime  /// LWW 判定キー（クライアント発行）
+  purchasedAt DateTime? /// PURCHASED に遷移した時刻
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
+  @@index([userId, scope, status])
+}
+
+/// 削除イベントのトラッキング（since 以降の削除を別端末に伝播するため）
+/// hard delete 時に upsert で行を追加・更新する。一定期間（例: 30日）経過後にバッチで掃除する想定（Phase 9.1）
+model DeletionTombstone {
+  id        String   @id @default(uuid())
+  userId    String   /// 削除を行ったユーザー
+  itemId    String   /// 削除された ShoppingItem の id
+  deletedAt DateTime @default(now()) /// サーバー時刻
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@index([userId, deletedAt])
 }
