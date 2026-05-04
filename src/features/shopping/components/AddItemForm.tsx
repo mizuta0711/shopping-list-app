@@ -10,6 +10,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { useShoppingStore } from "../stores/shoppingStore";
 import type { ItemScope } from "../types";
 
@@ -38,7 +39,22 @@ export const AddItemForm = memo<Props>(function AddItemForm({ scope }) {
       if (value.trim().length === 0) return;
       // 改行 / 句点（。）/ 読点（、）を区切り文字として扱う
       const names = value.split(/[\n、。]/);
+      const trimmedNames = names.map((n) => n.trim()).filter((n) => n.length > 0);
+      const before = useShoppingStore.getState().items.length;
       addItems(names, scope);
+      const added = useShoppingStore.getState().items.length - before;
+      const skipped = trimmedNames.length - added;
+
+      if (added === 0) {
+        toast(`すべて既存のため追加されませんでした`);
+      } else if (added === 1 && skipped === 0) {
+        toast.success(`「${trimmedNames[0]}」を追加しました`);
+      } else if (skipped === 0) {
+        toast.success(`${added}件追加しました`);
+      } else {
+        toast.success(`${added}件追加しました（${skipped}件は重複）`);
+      }
+
       setValue("");
     },
     [addItems, value, scope],

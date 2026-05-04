@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { History, RefreshCw, Settings, ShoppingCart } from "lucide-react";
+import { toast } from "sonner";
 import {
   DndContext,
   PointerSensor,
@@ -94,9 +95,11 @@ export function ShoppingMainView() {
         setKeptPurchasedIds((prev) =>
           prev.includes(id) ? prev : [...prev, id],
         );
+        toast.success(`「${target.name}」を購入済みにしました`);
       } else {
         // PURCHASED → PENDING: 保持リストから外す
         setKeptPurchasedIds((prev) => prev.filter((x) => x !== id));
+        toast(`「${target.name}」を未購入に戻しました`);
       }
     },
     [items, togglePurchased],

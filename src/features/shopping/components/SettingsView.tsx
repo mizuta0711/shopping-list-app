@@ -8,6 +8,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useShoppingStore } from "../stores/shoppingStore";
 import {
   exportStateToJson,
@@ -21,7 +22,9 @@ export function SettingsView() {
   const handleExport = useCallback(() => {
     const ok = exportStateToJson();
     if (!ok) {
-      window.alert("エクスポートするデータがありません");
+      toast.error("エクスポートするデータがありません");
+    } else {
+      toast.success("エクスポートしました");
     }
   }, []);
 
@@ -36,10 +39,10 @@ export function SettingsView() {
       if (!file) return;
       const ok = await importStateFromFile(file);
       if (!ok) {
-        window.alert("インポートに失敗しました。ファイル形式を確認してください。");
+        toast.error("インポートに失敗しました。ファイル形式を確認してください");
         return;
       }
-      window.alert("インポートが完了しました。");
+      toast.success("インポートが完了しました");
       window.location.href = "/";
     },
     [],
@@ -51,7 +54,7 @@ export function SettingsView() {
     );
     if (!confirmed) return;
     reset();
-    window.alert("すべてのデータを削除しました。");
+    toast.success("すべてのデータを削除しました");
   }, [reset]);
 
   return (

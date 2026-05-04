@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, History } from "lucide-react";
+import { toast } from "sonner";
 import { useShoppingStore } from "../stores/shoppingStore";
 import { groupPurchasedByDate } from "../stores/selectors";
 import { PurchasedItemRow } from "./PurchasedItemRow";
@@ -32,12 +33,20 @@ export function HistoryView() {
   );
 
   const handleRestore = useCallback(
-    (id: string) => togglePurchased(id),
-    [togglePurchased],
+    (id: string) => {
+      const target = items.find((i) => i.id === id);
+      togglePurchased(id);
+      if (target) toast.success(`「${target.name}」を未購入に戻しました`);
+    },
+    [items, togglePurchased],
   );
   const handleDelete = useCallback(
-    (id: string) => deleteItem(id),
-    [deleteItem],
+    (id: string) => {
+      const target = items.find((i) => i.id === id);
+      deleteItem(id);
+      if (target) toast(`「${target.name}」を削除しました`);
+    },
+    [items, deleteItem],
   );
 
   return (
