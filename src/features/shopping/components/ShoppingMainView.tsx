@@ -23,6 +23,7 @@ import { SortableItemRow } from "./SortableItemRow";
 import { AddItemForm } from "./AddItemForm";
 import { ScopeTabs } from "./ScopeTabs";
 import { SortMenu } from "./SortMenu";
+import { OnboardingModal } from "./OnboardingModal";
 
 export function ShoppingMainView() {
   const [hydrated, setHydrated] = useState(false);
@@ -38,6 +39,7 @@ export function ShoppingMainView() {
 
   const items = useShoppingStore((state) => state.items);
   const sort = useShoppingStore((state) => state.sort);
+  const hasOnboarded = useShoppingStore((state) => state.hasOnboarded);
   const togglePurchased = useShoppingStore((state) => state.togglePurchased);
   const moveScope = useShoppingStore((state) => state.moveScope);
   const setSort = useShoppingStore((state) => state.setSort);
@@ -158,6 +160,8 @@ export function ShoppingMainView() {
       <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white">
         <AddItemForm scope={activeScope} />
       </div>
+
+      {hydrated && !hasOnboarded && <OnboardingModal />}
     </main>
   );
 }
