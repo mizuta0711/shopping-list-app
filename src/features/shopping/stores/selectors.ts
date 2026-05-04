@@ -17,5 +17,8 @@ export const sortItems = (
   if (sort === "NAME") {
     return arr.sort((a, b) => a.name.localeCompare(b.name, "ja"));
   }
+  if (sort === "MANUAL") {
+    return arr.sort((a, b) => a.order - b.order);
+  }
   return arr.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 };

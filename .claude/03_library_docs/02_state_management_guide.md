@@ -14,7 +14,7 @@
 
 | ストア | ファイルパス | persist キー | 主要状態 | 主要アクション |
 |---|---|---|---|---|
-| `useShoppingStore` | `src/features/shopping/stores/shoppingStore.ts` | `shopping-list-app:state` | items, sort, hasOnboarded | addItem, addItems, togglePurchased, moveScope, deleteItem, setSort, setHasOnboarded, reset |
+| `useShoppingStore` | `src/features/shopping/stores/shoppingStore.ts` | `shopping-list-app:state` | items, sort, hasOnboarded | addItem, addItems, togglePurchased, moveScope, reorderItems, deleteItem, setSort, setHasOnboarded, reset |
 
 セレクタは `src/features/{feature}/stores/selectors.ts` に純粋関数として分離する（テスト容易性 + UI 側で `useMemo` 化が容易）。
 
@@ -132,3 +132,4 @@ SSR/CSR の不一致に注意。`localStorage` から復元される値は、サ
 | 1.1 | 2026-04-02 | ストア設計方針セクション追加 | Claude Code |
 | 1.2 | 2026-04-02 | テンプレート整合性修正 | Claude Code |
 | 2.0 | 2026-05-04 | shopping-list-app 実装に合わせて全面書き換え（`useShoppingStore` ストア追加、API キャッシュ前提の文言を削除、ID生成方針を追記） | Claude Code |
+| 2.1 | 2026-05-04 | Phase 1.5: `reorderItems` 追加、`SortKey` に `MANUAL` 追加、`order` フィールド・migrate 関数を反映 | Claude Code |
