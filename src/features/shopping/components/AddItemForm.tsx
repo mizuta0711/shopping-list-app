@@ -1,6 +1,14 @@
 "use client";
 
-import { memo, useCallback, useState, type FormEvent } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { Plus } from "lucide-react";
 import { useShoppingStore } from "../stores/shoppingStore";
 import type { ItemScope } from "../types";
@@ -9,31 +17,57 @@ type Props = {
   scope: ItemScope;
 };
 
+const MAX_HEIGHT_PX = 160;
+
 export const AddItemForm = memo<Props>(function AddItemForm({ scope }) {
   const [value, setValue] = useState("");
-  const addItem = useShoppingStore((state) => state.addItem);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const addItems = useShoppingStore((state) => state.addItems);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT_PX)}px`;
+  }, [value]);
 
   const handleSubmit = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      addItem(value, scope);
+      if (value.trim().length === 0) return;
+      const names = value.split("\n");
+      addItems(names, scope);
       setValue("");
     },
-    [addItem, value, scope],
+    [addItems, value, scope],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        formRef.current?.requestSubmit();
+      }
+    },
+    [],
   );
 
   return (
     <form
+      ref={formRef}
       onSubmit={handleSubmit}
-      className="flex items-center gap-2 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+      className="flex items-end gap-2 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
     >
-      <input
-        type="text"
+      <textarea
+        ref={textareaRef}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="追加したい商品名…"
-        className="min-w-0 flex-1 rounded-full border border-gray-300 bg-gray-50 px-4 py-2.5 text-base text-gray-900 placeholder-gray-400 focus:border-gray-900 focus:bg-white focus:outline-none"
-        aria-label="商品名"
+        onKeyDown={handleKeyDown}
+        placeholder="追加したい商品名… (改行で複数追加)"
+        rows={1}
+        className="min-w-0 flex-1 resize-none rounded-2xl border border-gray-300 bg-gray-50 px-4 py-2.5 text-base leading-snug text-gray-900 placeholder-gray-400 focus:border-gray-900 focus:bg-white focus:outline-none"
+        aria-label="商品名（改行で複数追加可能）"
       />
       <button
         type="submit"
