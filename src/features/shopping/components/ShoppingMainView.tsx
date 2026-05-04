@@ -2,12 +2,26 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ShoppingCart } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { useShoppingStore } from "../stores/shoppingStore";
 import { filterPendingByScope, sortItems } from "../stores/selectors";
 import type { ItemScope } from "../types";
-import { ShoppingItemRow } from "./ShoppingItemRow";
+import { SortableItemRow } from "./SortableItemRow";
 import { AddItemForm } from "./AddItemForm";
 import { ScopeTabs } from "./ScopeTabs";
+import { SortMenu } from "./SortMenu";
 
 export function ShoppingMainView() {
   const [hydrated, setHydrated] = useState(false);
@@ -25,6 +39,14 @@ export function ShoppingMainView() {
   const sort = useShoppingStore((state) => state.sort);
   const togglePurchased = useShoppingStore((state) => state.togglePurchased);
   const moveScope = useShoppingStore((state) => state.moveScope);
+  const setSort = useShoppingStore((state) => state.setSort);
+  const reorderItems = useShoppingStore((state) => state.reorderItems);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
+  );
 
   const todayCount = useMemo(
     () => filterPendingByScope(items, "TODAY").length,
@@ -49,11 +71,33 @@ export function ShoppingMainView() {
     [moveScope],
   );
 
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const oldIndex = visibleItems.findIndex((i) => i.id === active.id);
+      const newIndex = visibleItems.findIndex((i) => i.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      const newOrder = arrayMove(visibleItems, oldIndex, newIndex).map(
+        (i) => i.id,
+      );
+      if (sort !== "MANUAL") setSort("MANUAL");
+      reorderItems(activeScope, newOrder);
+    },
+    [visibleItems, sort, setSort, reorderItems, activeScope],
+  );
+
+  const sortableIds = useMemo(
+    () => visibleItems.map((i) => i.id),
+    [visibleItems],
+  );
+
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col bg-white">
       <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-3">
         <ShoppingCart className="h-5 w-5 text-gray-900" aria-hidden />
-        <h1 className="text-lg font-bold text-gray-900">買い物リスト</h1>
+        <h1 className="flex-1 text-lg font-bold text-gray-900">買い物リスト</h1>
+        <SortMenu active={sort} onChange={setSort} />
       </header>
 
       <ScopeTabs
@@ -69,17 +113,28 @@ export function ShoppingMainView() {
         ) : visibleItems.length === 0 ? (
           <EmptyState scope={activeScope} />
         ) : (
-          <ul>
-            {visibleItems.map((item) => (
-              <li key={item.id}>
-                <ShoppingItemRow
-                  item={item}
-                  onToggle={handleToggle}
-                  onMoveScope={handleMoveScope}
-                />
-              </li>
-            ))}
-          </ul>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={sortableIds}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul>
+                {visibleItems.map((item) => (
+                  <li key={item.id}>
+                    <SortableItemRow
+                      item={item}
+                      onToggle={handleToggle}
+                      onMoveScope={handleMoveScope}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 
