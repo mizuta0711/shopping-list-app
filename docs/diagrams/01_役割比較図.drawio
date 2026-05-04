@@ -1,0 +1,91 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="役割比較図" id="role-comparison">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="スキル / サブエージェント / フック の役割比較" style="text;fontSize=22;fontStyle=1;align=center" vertex="1" parent="1">
+          <mxGeometry x="300" y="20" width="800" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="本テンプレートでは 3 種類の自動化要素を使い分けている。呼び出し方・動作する場所・典型的な用途が異なる。" style="text;fontSize=12;align=center;fontColor=#666666" vertex="1" parent="1">
+          <mxGeometry x="300" y="60" width="800" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="user" value="ユーザー" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="360" y="125" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="main" value="メインエージェント&#xa;(ユーザーが会話している Claude Code)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#5E35B1;fontSize=14;fontStyle=1;strokeWidth=2" vertex="1" parent="1">
+          <mxGeometry x="500" y="115" width="400" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="user_arrow" style="endArrow=classic;html=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="user" target="main">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="skill_header" value="① スキル&#xa;&lt;font style=&quot;font-size: 12px&quot;&gt;(Slash Command)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1976D2;strokeColor=#0D47A1;fontSize=16;fontStyle=1;fontColor=#FFFFFF;strokeWidth=2" vertex="1" parent="1">
+          <mxGeometry x="60" y="230" width="380" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="skill_what" value="【何？】再利用可能な手順書 (markdown)&#xa;【どこ？】.claude/skills/{name}/SKILL.md" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=12;align=left;verticalAlign=middle;spacingLeft=12" vertex="1" parent="1">
+          <mxGeometry x="60" y="290" width="380" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="skill_trigger" value="【呼び出し方】&#xa;ユーザーが /xxx と入力して明示的に起動" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=12;align=left;verticalAlign=middle;spacingLeft=12" vertex="1" parent="1">
+          <mxGeometry x="60" y="350" width="380" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="skill_who" value="【誰が実行？】&#xa;メインエージェント自身 (手順書を読んで処理)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=12;align=left;verticalAlign=middle;spacingLeft=12" vertex="1" parent="1">
+          <mxGeometry x="60" y="400" width="380" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="skill_examples" value="【本テンプレの例】&#xa;/new-feature, /design-review,&#xa;/code-review, /browser-test,&#xa;/build-check, /update-docs,&#xa;/sync-check, /pre-push-check,&#xa;/complete-feature, /done" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=11;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8" vertex="1" parent="1">
+          <mxGeometry x="60" y="450" width="380" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="sub_header" value="② サブエージェント&#xa;&lt;font style=&quot;font-size: 12px&quot;&gt;(Sub Agent)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#388E3C;strokeColor=#1B5E20;fontSize=16;fontStyle=1;fontColor=#FFFFFF;strokeWidth=2" vertex="1" parent="1">
+          <mxGeometry x="510" y="230" width="380" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sub_what" value="【何？】独立したコンテキストで動く専用Claude&#xa;【どこ？】.claude/agents/{name}.md" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#388E3C;fontSize=12;align=left;verticalAlign=middle;spacingLeft=12" vertex="1" parent="1">
+          <mxGeometry x="510" y="290" width="380" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sub_trigger" value="【呼び出し方】&#xa;Agent(subagent_type: &quot;xxx&quot;) で起動&#xa;スキル内から呼ばれることが多い" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#388E3C;fontSize=12;align=left;verticalAlign=middle;spacingLeft=12" vertex="1" parent="1">
+          <mxGeometry x="510" y="350" width="380" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="sub_who" value="【誰が実行？】&#xa;別プロセスのClaude (メインと別コンテキスト)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#388E3C;fontSize=12;align=left;verticalAlign=middle;spacingLeft=12" vertex="1" parent="1">
+          <mxGeometry x="510" y="400" width="380" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="sub_examples" value="【本テンプレの例】&#xa;coding-specialist (実装)&#xa;code-reviewer (レビュー)&#xa;documentation-manager (設計書管理)&#xa;browser-tester (ブラウザ実機テスト)&#xa;product-advisor (企画UXアドバイス)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#388E3C;fontSize=11;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8" vertex="1" parent="1">
+          <mxGeometry x="510" y="450" width="380" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="hook_header" value="③ フック&#xa;&lt;font style=&quot;font-size: 12px&quot;&gt;(Hook)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F57C00;strokeColor=#E65100;fontSize=16;fontStyle=1;fontColor=#FFFFFF;strokeWidth=2" vertex="1" parent="1">
+          <mxGeometry x="960" y="230" width="380" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="hook_what" value="【何？】ツール実行の前後に自動発火するコマンド&#xa;【どこ？】.claude/settings.json + hooks/" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#F57C00;fontSize=12;align=left;verticalAlign=middle;spacingLeft=12" vertex="1" parent="1">
+          <mxGeometry x="960" y="290" width="380" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="hook_trigger" value="【呼び出し方】&#xa;自動 (PreToolUse / PostToolUse)&#xa;Claude の判断を介さない" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#F57C00;fontSize=12;align=left;verticalAlign=middle;spacingLeft=12" vertex="1" parent="1">
+          <mxGeometry x="960" y="350" width="380" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="hook_who" value="【誰が実行？】&#xa;Claude Code ランタイム (シェルで直接実行)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#F57C00;fontSize=12;align=left;verticalAlign=middle;spacingLeft=12" vertex="1" parent="1">
+          <mxGeometry x="960" y="400" width="380" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="hook_examples" value="【本テンプレの例】&#xa;・DBバックアップフック&#xa;　(prisma migrate 前)&#xa;・型チェックフック&#xa;　(git commit 前 / エラーでブロック)&#xa;・設計書同期通知フック&#xa;　(git commit 後)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#F57C00;fontSize=11;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8" vertex="1" parent="1">
+          <mxGeometry x="960" y="450" width="380" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow_skill" value="/xxx 入力で起動" style="endArrow=classic;html=1;fontSize=11;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#1976D2;strokeWidth=2" edge="1" parent="1" source="main" target="skill_header">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow_sub" value="Agent() で起動" style="endArrow=classic;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#388E3C;strokeWidth=2" edge="1" parent="1" source="main" target="sub_header">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow_hook" value="ツール実行の前後で自動発火" style="endArrow=classic;html=1;fontSize=11;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#F57C00;strokeWidth=2" edge="1" parent="1" source="main" target="hook_header">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="relation_title" value="★ 3 者の関係性" style="text;fontSize=16;fontStyle=1;align=left;fontColor=#333333" vertex="1" parent="1">
+          <mxGeometry x="60" y="600" width="400" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="relation1" value="&lt;b&gt;スキル → サブエージェント&lt;/b&gt;&#xa;スキルの手順書の中で &lt;b&gt;Agent()&lt;/b&gt; を呼ぶことで、サブエージェントに処理を委譲する。&#xa;例: /code-review は内部で code-reviewer エージェントを起動してレビューを実行させる。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#999999;fontSize=12;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10" vertex="1" parent="1">
+          <mxGeometry x="60" y="640" width="1280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="relation2" value="&lt;b&gt;フック → メインエージェント&lt;/b&gt;&#xa;フックは Claude の意思に関係なく自動発火する。失敗すれば処理をブロックし、成功時はメッセージで通知できる。&#xa;例: 型チェックフックがエラーを検出すると git commit が物理的にブロックされる。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#999999;fontSize=12;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10" vertex="1" parent="1">
+          <mxGeometry x="60" y="710" width="1280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="relation3" value="&lt;b&gt;使い分け方針&lt;/b&gt;&#xa;・手順を決めて明示的に呼び出したい → &lt;b&gt;スキル&lt;/b&gt;　　・別文脈で重い作業を切り出したい → &lt;b&gt;サブエージェント&lt;/b&gt;&#xa;・忘れると致命的なチェックを強制したい → &lt;b&gt;フック&lt;/b&gt; (型チェック、DBバックアップ等)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9E6;strokeColor=#B8860B;fontSize=12;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10" vertex="1" parent="1">
+          <mxGeometry x="60" y="780" width="1280" height="70" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,40 @@
+{
+  "name": "shopping-list-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "next-auth": "^4.24.11",
+    "@prisma/client": "^6.0.0",
+    "@auth/prisma-adapter": "^2.7.4",
+    "zustand": "^5.0.2",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.5",
+    "class-variance-authority": "^0.7.1",
+    "lucide-react": "^0.460.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "postcss": "^8.5.1",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "^16.0.0",
+    "prisma": "^6.0.0",
+    "tsx": "^4.19.2",
+    "@playwright/test": "^1.49.0"
+  }
+}

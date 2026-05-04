@@ -1,0 +1,52 @@
+{
+  "name": "shopping-list-app",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+
+  // Playwright が共有メモリ不足でクラッシュしないよう --ipc=host を付ける
+  "runArgs": ["--ipc=host"],
+
+  // WSL から VS Code を起動した場合のみ HOME が WSL ホームを指す
+  // Windows 側から直接開くと Windows の USERPROFILE になるため、必ず WSL から起動すること
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.claude.json,target=/home/node/.claude.json,type=bind,consistency=cached"
+  ],
+
+  // NextAuth はコールバック URL のホスト一致を要求するため、3000 は requireLocalPort:true
+  "forwardPorts": [3000, 5432],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js",
+      "requireLocalPort": true,
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      // コンテナ内の Claude Code はバイパスモード（権限プロンプトなし）で起動する。
+      // コンテナはホスト側資産（/mnt/c など）から隔離されているため、ブラスト
+      // ラディウスはワークスペース内に閉じる。WSL ホスト側で素の claude を
+      // 起動した場合はこの設定は適用されず、毎回確認のデフォルトモードになる。
+      "settings": {
+        "claudeCode.initialPermissionMode": "bypassPermissions",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "anthropic.claude-code",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "Prisma.prisma",
+        "ms-playwright.playwright"
+      ]
+    }
+  },
+
+  "postCreateCommand": "sudo chown -R node:node /home/node/.claude /home/node/.claude.json && git config core.autocrlf input && npm install && npx prisma generate && npm install -g @anthropic-ai/claude-code && npx -y playwright install --with-deps chromium && claude mcp add playwright npx '@playwright/mcp@latest'",
+
+  "remoteUser": "node"
+}
