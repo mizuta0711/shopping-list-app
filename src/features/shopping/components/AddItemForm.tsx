@@ -3,18 +3,23 @@
 import { memo, useCallback, useState, type FormEvent } from "react";
 import { Plus } from "lucide-react";
 import { useShoppingStore } from "../stores/shoppingStore";
+import type { ItemScope } from "../types";
 
-export const AddItemForm = memo(function AddItemForm() {
+type Props = {
+  scope: ItemScope;
+};
+
+export const AddItemForm = memo<Props>(function AddItemForm({ scope }) {
   const [value, setValue] = useState("");
   const addItem = useShoppingStore((state) => state.addItem);
 
   const handleSubmit = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      addItem(value);
+      addItem(value, scope);
       setValue("");
     },
-    [addItem, value],
+    [addItem, value, scope],
   );
 
   return (
