@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { History, Settings, ShoppingCart } from "lucide-react";
+import { History, RefreshCw, Settings, ShoppingCart } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useShoppingStore } from "../stores/shoppingStore";
 import { filterPendingByScope, sortItems } from "../stores/selectors";
-import type { ItemScope } from "../types";
+import type { ItemScope, ShoppingItem } from "../types";
 import { SortableItemRow } from "./SortableItemRow";
 import { AddItemForm } from "./AddItemForm";
 import { ScopeTabs } from "./ScopeTabs";
@@ -28,6 +28,8 @@ import { OnboardingModal } from "./OnboardingModal";
 export function ShoppingMainView() {
   const [hydrated, setHydrated] = useState(false);
   const [activeScope, setActiveScope] = useState<ItemScope>("TODAY");
+  // セッション中だけ表示しておく購入済みアイテムの ID 集合（誤タップ救済用）
+  const [keptPurchasedIds, setKeptPurchasedIds] = useState<string[]>([]);
 
   useEffect(() => {
     setHydrated(useShoppingStore.persist.hasHydrated());
@@ -60,19 +62,54 @@ export function ShoppingMainView() {
     [items],
   );
 
-  const visibleItems = useMemo(
-    () => sortItems(filterPendingByScope(items, activeScope), sort),
-    [items, activeScope, sort],
+  const visibleItems = useMemo<ShoppingItem[]>(() => {
+    // 元の位置を維持するため、PENDING と「保持中の PURCHASED」を1つの配列でまとめてからソート
+    const filtered = items.filter(
+      (i) =>
+        i.scope === activeScope &&
+        (i.status === "PENDING" ||
+          (i.status === "PURCHASED" && keptPurchasedIds.includes(i.id))),
+    );
+    return sortItems(filtered, sort);
+  }, [items, activeScope, sort, keptPurchasedIds]);
+
+  const keptCountThisScope = useMemo(
+    () =>
+      items.filter(
+        (i) =>
+          i.scope === activeScope &&
+          i.status === "PURCHASED" &&
+          keptPurchasedIds.includes(i.id),
+      ).length,
+    [items, activeScope, keptPurchasedIds],
   );
 
   const handleToggle = useCallback(
-    (id: string) => togglePurchased(id),
-    [togglePurchased],
+    (id: string) => {
+      const target = items.find((i) => i.id === id);
+      if (!target) return;
+      togglePurchased(id);
+      if (target.status === "PENDING") {
+        // PENDING → PURCHASED: セッション保持リストに追加
+        setKeptPurchasedIds((prev) =>
+          prev.includes(id) ? prev : [...prev, id],
+        );
+      } else {
+        // PURCHASED → PENDING: 保持リストから外す
+        setKeptPurchasedIds((prev) => prev.filter((x) => x !== id));
+      }
+    },
+    [items, togglePurchased],
   );
+
   const handleMoveScope = useCallback(
     (id: string, targetScope: ItemScope) => moveScope(id, targetScope),
     [moveScope],
   );
+
+  const handleRefresh = useCallback(() => {
+    setKeptPurchasedIds([]);
+  }, []);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -81,11 +118,14 @@ export function ShoppingMainView() {
       const oldIndex = visibleItems.findIndex((i) => i.id === active.id);
       const newIndex = visibleItems.findIndex((i) => i.id === over.id);
       if (oldIndex === -1 || newIndex === -1) return;
-      const newOrder = arrayMove(visibleItems, oldIndex, newIndex).map(
-        (i) => i.id,
-      );
+      const moved = arrayMove(visibleItems, oldIndex, newIndex);
+      // PENDING のみで再採番（PURCHASED は次の更新で消えるため触らない）
+      const orderedPendingIds = moved
+        .filter((i) => i.status === "PENDING")
+        .map((i) => i.id);
+      if (orderedPendingIds.length === 0) return;
       if (sort !== "MANUAL") setSort("MANUAL");
-      reorderItems(activeScope, newOrder);
+      reorderItems(activeScope, orderedPendingIds);
     },
     [visibleItems, sort, setSort, reorderItems, activeScope],
   );
@@ -102,6 +142,20 @@ export function ShoppingMainView() {
         <h1 className="ml-1 flex-1 text-lg font-bold text-gray-900">
           買い物リスト
         </h1>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={keptCountThisScope === 0}
+          aria-label="購入済みアイテムをリストから消す"
+          className="relative flex h-9 w-9 items-center justify-center rounded-full text-gray-700 transition active:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
+        >
+          <RefreshCw className="h-5 w-5" aria-hidden />
+          {keptCountThisScope > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold text-white">
+              {keptCountThisScope}
+            </span>
+          )}
+        </button>
         <SortMenu active={sort} onChange={setSort} />
         <Link
           href="/history"
@@ -174,7 +228,7 @@ function SkeletonList() {
           key={i}
           className="flex items-center gap-3 border-b border-gray-100 px-4 py-4"
         >
-          <span className="h-6 w-6 shrink-0 rounded-full bg-gray-100" />
+          <span className="h-8 w-8 shrink-0 rounded-full bg-gray-100" />
           <span className="h-4 max-w-[60%] flex-1 rounded bg-gray-100" />
         </li>
       ))}

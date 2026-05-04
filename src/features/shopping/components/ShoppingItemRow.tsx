@@ -15,6 +15,8 @@ export const ShoppingItemRow = memo<Props>(function ShoppingItemRow({
   onToggle,
   onMoveScope,
 }) {
+  const isPurchased = item.status === "PURCHASED";
+
   const targetScope: ItemScope = item.scope === "TODAY" ? "LATER" : "TODAY";
   const moveLabel =
     item.scope === "TODAY" ? "また今度に移動" : "今日に移動";
@@ -31,30 +33,51 @@ export const ShoppingItemRow = memo<Props>(function ShoppingItemRow({
         type="button"
         onClick={() => onToggle(item.id)}
         className="group flex flex-1 items-center gap-3 px-4 py-3 text-left transition active:bg-gray-50"
-        aria-label={`${item.name} を購入済みにする`}
+        aria-label={
+          isPurchased
+            ? `${item.name} を未購入に戻す`
+            : `${item.name} を購入済みにする`
+        }
       >
         <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 transition group-active:bg-emerald-500"
+          className={
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition " +
+            (isPurchased
+              ? "bg-emerald-500"
+              : "bg-gray-100 group-active:bg-emerald-500")
+          }
           aria-hidden
         >
           <Check
-            className="h-5 w-5 text-gray-400 transition group-active:text-white"
+            className={
+              "h-5 w-5 transition " +
+              (isPurchased
+                ? "text-white"
+                : "text-gray-400 group-active:text-white")
+            }
             strokeWidth={3}
             aria-hidden
           />
         </span>
-        <span className="flex-1 truncate text-base text-gray-900">
+        <span
+          className={
+            "flex-1 truncate text-base transition " +
+            (isPurchased ? "text-gray-400 line-through" : "text-gray-900")
+          }
+        >
           {item.name}
         </span>
       </button>
-      <button
-        type="button"
-        onClick={handleMove}
-        className="flex w-12 shrink-0 items-center justify-center text-gray-400 transition active:bg-gray-100 active:text-gray-700"
-        aria-label={`${item.name} を${moveLabel}`}
-      >
-        <MoveIcon className="h-5 w-5" aria-hidden />
-      </button>
+      {!isPurchased && (
+        <button
+          type="button"
+          onClick={handleMove}
+          className="flex w-12 shrink-0 items-center justify-center text-gray-400 transition active:bg-gray-100 active:text-gray-700"
+          aria-label={`${item.name} を${moveLabel}`}
+        >
+          <MoveIcon className="h-5 w-5" aria-hidden />
+        </button>
+      )}
     </div>
   );
 });

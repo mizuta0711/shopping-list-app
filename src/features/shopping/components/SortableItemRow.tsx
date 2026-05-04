@@ -24,7 +24,10 @@ export const SortableItemRow = memo<Props>(function SortableItemRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({
+    id: item.id,
+    disabled: item.status === "PURCHASED",
+  });
 
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
