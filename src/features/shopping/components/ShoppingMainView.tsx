@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ShoppingCart } from "lucide-react";
+import { History, ShoppingCart } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -94,10 +95,19 @@ export function ShoppingMainView() {
 
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col bg-white">
-      <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-3">
-        <ShoppingCart className="h-5 w-5 text-gray-900" aria-hidden />
-        <h1 className="flex-1 text-lg font-bold text-gray-900">買い物リスト</h1>
+      <header className="sticky top-0 z-10 flex items-center gap-1 border-b border-gray-200 bg-white px-3 py-3">
+        <ShoppingCart className="ml-1 h-5 w-5 text-gray-900" aria-hidden />
+        <h1 className="ml-1 flex-1 text-lg font-bold text-gray-900">
+          買い物リスト
+        </h1>
         <SortMenu active={sort} onChange={setSort} />
+        <Link
+          href="/history"
+          aria-label="購入済み履歴を開く"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-gray-700 transition active:bg-gray-100"
+        >
+          <History className="h-5 w-5" aria-hidden />
+        </Link>
       </header>
 
       <ScopeTabs
