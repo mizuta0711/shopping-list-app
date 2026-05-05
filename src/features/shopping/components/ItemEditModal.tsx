@@ -8,6 +8,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { ShoppingItem } from "../types";
 
@@ -24,8 +25,13 @@ export const ItemEditModal = memo<Props>(function ItemEditModal({
   onSave,
   onClose,
 }) {
+  const [mounted, setMounted] = useState(false);
   const [value, setValue] = useState(item.name);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -53,7 +59,9 @@ export const ItemEditModal = memo<Props>(function ItemEditModal({
     [canSave, trimmed, onSave],
   );
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -116,7 +124,8 @@ export const ItemEditModal = memo<Props>(function ItemEditModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 });
 

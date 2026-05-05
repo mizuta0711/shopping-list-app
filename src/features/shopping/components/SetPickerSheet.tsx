@@ -9,6 +9,7 @@ import {
   useState,
   type RefObject,
 } from "react";
+import { createPortal } from "react-dom";
 import { ArrowLeft, Check, ListChecks, X } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -30,10 +31,16 @@ export const SetPickerSheet = memo<Props>(function SetPickerSheet({
   onClose,
   openerRef,
 }) {
+  const [mounted, setMounted] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [step, setStep] = useState<Step>("list");
   const [selectedSet, setSelectedSet] = useState<ShoppingSet | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
+
+  // ポータル先（document.body）が利用可能になったらマウントする
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   // handleConfirm が checked の最新値を参照できるよう ref で保持（useCallback の再生成を抑制）
   const checkedRef = useRef<Set<string>>(checked);
 
@@ -151,7 +158,9 @@ export const SetPickerSheet = memo<Props>(function SetPickerSheet({
     handleClose();
   }, [selectedSet, activeScope, handleClose]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -188,7 +197,8 @@ export const SetPickerSheet = memo<Props>(function SetPickerSheet({
           )
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 });
 

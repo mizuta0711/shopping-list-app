@@ -1,6 +1,7 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
 import { useShoppingStore } from "../stores/shoppingStore";
@@ -8,6 +9,11 @@ import { useShoppingStore } from "../stores/shoppingStore";
 export const OnboardingModal = memo(function OnboardingModal() {
   const router = useRouter();
   const setHasOnboarded = useShoppingStore((state) => state.setHasOnboarded);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogin = useCallback(() => {
     setHasOnboarded(true);
@@ -18,7 +24,9 @@ export const OnboardingModal = memo(function OnboardingModal() {
     setHasOnboarded(true);
   }, [setHasOnboarded]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -73,7 +81,8 @@ export const OnboardingModal = memo(function OnboardingModal() {
       </div>
 
       <p className="text-xs text-gray-500">後から設定でログインできます</p>
-    </div>
+    </div>,
+    document.body,
   );
 });
 
