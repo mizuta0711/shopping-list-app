@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useCallback, useRef, type ChangeEvent } from "react";
 import {
   ArrowLeft,
+  ChevronRight,
   Download,
+  ListChecks,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -76,6 +78,22 @@ export function SettingsView() {
 
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <AccountSection />
+
+        <section className="mb-8">
+          <h2 className="mb-3 px-1 text-xs font-medium uppercase text-gray-500">
+            セット
+          </h2>
+          <Link
+            href="/sets"
+            className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 transition active:bg-gray-50"
+          >
+            <span className="flex items-center gap-3">
+              <ListChecks className="h-5 w-5 text-gray-500" aria-hidden />
+              <span className="text-base text-gray-900">セット管理</span>
+            </span>
+            <ChevronRight className="h-5 w-5 text-gray-400" aria-hidden />
+          </Link>
+        </section>
 
         <section className="mb-8">
           <h2 className="mb-3 px-1 text-xs font-medium uppercase text-gray-500">
