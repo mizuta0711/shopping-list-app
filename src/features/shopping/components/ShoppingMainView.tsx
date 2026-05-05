@@ -34,12 +34,19 @@ import { AddItemForm } from "./AddItemForm";
 import { ScopeTabs } from "./ScopeTabs";
 import { SortMenu } from "./SortMenu";
 import { OnboardingModal } from "./OnboardingModal";
+import { ItemEditModal } from "./ItemEditModal";
 
 export function ShoppingMainView() {
   const [hydrated, setHydrated] = useState(false);
   const [activeScope, setActiveScope] = useState<ItemScope>("TODAY");
   // セッション中だけ表示しておく購入済みアイテムの ID 集合（誤タップ救済用）
   const [keptPurchasedIds, setKeptPurchasedIds] = useState<string[]>([]);
+  // スワイプで開いている行（同時に 1 行のみ）
+  const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
+  // 編集中アイテム（モーダル表示）
+  const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
+  // モーダルを閉じた後にフォーカスを戻すドラッグハンドルの aria-label 用に編集前の ID を保持
+  const editingItemIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     setHydrated(useShoppingStore.persist.hasHydrated());
@@ -56,6 +63,9 @@ export function ShoppingMainView() {
   const moveScope = useShoppingStore((state) => state.moveScope);
   const setSort = useShoppingStore((state) => state.setSort);
   const reorderItems = useShoppingStore((state) => state.reorderItems);
+  const deleteItem = useShoppingStore((state) => state.deleteItem);
+  const updateItemName = useShoppingStore((state) => state.updateItemName);
+  const restoreItem = useShoppingStore((state) => state.restoreItem);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -122,6 +132,64 @@ export function ShoppingMainView() {
   const handleRefresh = useCallback(() => {
     setKeptPurchasedIds([]);
   }, []);
+
+  const handleSwipeOpenChange = useCallback(
+    (id: string, open: boolean) => {
+      setOpenSwipeId(open ? id : (prev) => (prev === id ? null : prev));
+    },
+    [],
+  );
+
+  const handleEditRequest = useCallback((item: ShoppingItem) => {
+    editingItemIdRef.current = item.id;
+    setEditingItem(item);
+  }, []);
+
+  const returnFocusToHandle = useCallback(() => {
+    const id = editingItemIdRef.current;
+    if (!id) return;
+    // data-item-id 属性でドラッグハンドルを特定してフォーカスを戻す
+    const handleById = document.querySelector<HTMLButtonElement>(
+      `button[data-item-id="${id}"]`,
+    );
+    handleById?.focus();
+  }, []);
+
+  const handleEditSave = useCallback(
+    (newName: string) => {
+      if (!editingItem) return;
+      updateItemName(editingItem.id, newName);
+      setEditingItem(null);
+      toast.success("変更しました");
+      returnFocusToHandle();
+    },
+    [editingItem, updateItemName, returnFocusToHandle],
+  );
+
+  const handleEditClose = useCallback(() => {
+    setEditingItem(null);
+    returnFocusToHandle();
+  }, [returnFocusToHandle]);
+
+  const handleDeleteRequest = useCallback(
+    (item: ShoppingItem) => {
+      // 即時削除（アンドゥトーストで取り消し可能）
+      // スワイプを閉じてからアイテムを削除（アンドゥ復元時に再オープンしないよう先にリセット）
+      setOpenSwipeId(null);
+      deleteItem(item.id);
+      toast(`「${item.name}」を削除しました`, {
+        duration: 5000,
+        action: {
+          label: "元に戻す",
+          onClick: () => {
+            restoreItem(item);
+            toast.success(`「${item.name}」を復元しました`);
+          },
+        },
+      });
+    },
+    [deleteItem, restoreItem],
+  );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -220,6 +288,12 @@ export function ShoppingMainView() {
                       item={item}
                       onToggle={handleToggle}
                       onMoveScope={handleMoveScope}
+                      swipeOpen={openSwipeId === item.id}
+                      onSwipeOpenChange={(open) =>
+                        handleSwipeOpenChange(item.id, open)
+                      }
+                      onEditRequest={handleEditRequest}
+                      onDeleteRequest={handleDeleteRequest}
                     />
                   </li>
                 ))}
@@ -237,6 +311,14 @@ export function ShoppingMainView() {
 
       {hydrated && !hasOnboarded && <OnboardingModal />}
       <SyncStatusSheet ref={syncSheetRef} />
+
+      {editingItem && (
+        <ItemEditModal
+          item={editingItem}
+          onSave={handleEditSave}
+          onClose={handleEditClose}
+        />
+      )}
     </main>
   );
 }

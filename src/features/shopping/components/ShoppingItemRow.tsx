@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, type MouseEvent } from "react";
+import { memo, type MouseEvent, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import type { ItemScope, ShoppingItem } from "../types";
 
@@ -8,12 +8,15 @@ type Props = {
   item: ShoppingItem;
   onToggle: (id: string) => void;
   onMoveScope: (id: string, targetScope: ItemScope) => void;
+  /** 行末に追加表示する要素（ドラッグハンドル等） */
+  trailing?: ReactNode;
 };
 
 export const ShoppingItemRow = memo<Props>(function ShoppingItemRow({
   item,
   onToggle,
   onMoveScope,
+  trailing,
 }) {
   const isPurchased = item.status === "PURCHASED";
 
@@ -78,6 +81,9 @@ export const ShoppingItemRow = memo<Props>(function ShoppingItemRow({
           <MoveIcon className="h-5 w-5" aria-hidden />
         </button>
       )}
+      {trailing}
     </div>
   );
 });
+
+ShoppingItemRow.displayName = "ShoppingItemRow";
