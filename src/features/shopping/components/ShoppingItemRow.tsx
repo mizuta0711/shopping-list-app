@@ -33,47 +33,67 @@ export const ShoppingItemRow = memo<Props>(function ShoppingItemRow({
     onMoveScope(item.id, targetScope);
   };
 
+  const checkmark = (
+    <span
+      className={
+        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition " +
+        (isPurchased
+          ? "bg-emerald-500"
+          : editMode
+          ? "bg-gray-100"
+          : "bg-gray-100 group-active:bg-emerald-500")
+      }
+      aria-hidden
+    >
+      <Check
+        className={
+          "h-5 w-5 transition " +
+          (isPurchased
+            ? "text-white"
+            : editMode
+            ? "text-gray-400"
+            : "text-gray-400 group-active:text-white")
+        }
+        strokeWidth={3}
+        aria-hidden
+      />
+    </span>
+  );
+
+  const nameLabel = (
+    <span
+      className={
+        "flex-1 truncate text-base transition " +
+        (isPurchased ? "text-gray-400 line-through" : "text-gray-900")
+      }
+    >
+      {item.name}
+    </span>
+  );
+
   return (
     <div className="flex w-full items-stretch border-b border-gray-100">
-      <button
-        type="button"
-        onClick={() => onToggle(item.id)}
-        className="group flex flex-1 items-center gap-3 px-4 py-3 text-left transition active:bg-gray-50"
-        aria-label={
-          isPurchased
-            ? `${item.name} を未購入に戻す`
-            : `${item.name} を購入済みにする`
-        }
-      >
-        <span
-          className={
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition " +
-            (isPurchased
-              ? "bg-emerald-500"
-              : "bg-gray-100 group-active:bg-emerald-500")
-          }
-          aria-hidden
-        >
-          <Check
-            className={
-              "h-5 w-5 transition " +
-              (isPurchased
-                ? "text-white"
-                : "text-gray-400 group-active:text-white")
-            }
-            strokeWidth={3}
-            aria-hidden
-          />
-        </span>
-        <span
-          className={
-            "flex-1 truncate text-base transition " +
-            (isPurchased ? "text-gray-400 line-through" : "text-gray-900")
+      {editMode ? (
+        // 編集モード: タップでチェック切替を無効化（誤操作防止）。視覚は維持
+        <div className="flex flex-1 items-center gap-3 px-4 py-3">
+          {checkmark}
+          {nameLabel}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onToggle(item.id)}
+          className="group flex flex-1 items-center gap-3 px-4 py-3 text-left transition active:bg-gray-50"
+          aria-label={
+            isPurchased
+              ? `${item.name} を未購入に戻す`
+              : `${item.name} を購入済みにする`
           }
         >
-          {item.name}
-        </span>
-      </button>
+          {checkmark}
+          {nameLabel}
+        </button>
+      )}
       {!isPurchased && !editMode && (
         <button
           type="button"
