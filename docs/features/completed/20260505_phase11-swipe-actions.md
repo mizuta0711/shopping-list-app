@@ -62,7 +62,7 @@
 | 1 | Stage 1 | Stage 1 機能・画面設計の記入 | ✅ 完了 | 本書 §3 |
 | 2 | Stage 1 | `/design-review feature` 実行 | ✅ 完了 | [docs/reviews/20260505_022258_design-review-feature-phase11.md](../../reviews/20260505_022258_design-review-feature-phase11.md) |
 | 3 | Stage 1 | レビュー指摘の反映 → Stage 1 確定 | ✅ 完了 | 5 件全採用（履歴スコープ外/アンドゥトースト/80px/setActivatorNodeRef/44pxハンドル/Phase10.3注記/UX-2,UX-3 登録/キーボードSC撤去） |
-| 4 | Stage 2 | Stage 2 技術設計の記入 | 🟡 記入中 | 本書 §4 |
+| 4 | Stage 2 | Stage 2 技術設計の記入 | ✅ 完了 | 本書 §4（v1.2 で確定。v2.0 で Phase 13 巻き戻しを記録） |
 | 5 | Stage 2 | `/design-review tech` 実行 | ⬜ 不要（Stage 1 反映で技術方針確定済み・実装後 code-review で代替） | |
 | 6 | 実装 | `@use-gesture/react` 導入 + 共通 `SwipeableRow` ラッパー作成 | ✅ 完了 | 2026-05-05 |
 | 7 | 実装 | `useShoppingStore.updateItemName` + `restoreItem` アクション追加 | ✅ 完了 | `updatedAt` 同期 / アンドゥ用、多重実行防御込み |
