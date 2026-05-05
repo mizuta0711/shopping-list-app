@@ -24,6 +24,13 @@ type ShoppingActions = {
   setSort: (sort: SortKey) => void;
   setHasOnboarded: (value: boolean) => void;
   reset: () => void;
+  /** 同期サービスがサーバー全件で上書きする時に使う（マージ完了時など） */
+  setItems: (items: ShoppingItem[]) => void;
+  /** 同期サービスがサーバー差分を反映する時に使う（reconcile 結果の適用） */
+  applyServerChanges: (params: {
+    upserts: ShoppingItem[];
+    deletes: string[];
+  }) => void;
 };
 
 const initialState: ShoppingState = {
@@ -200,6 +207,17 @@ export const useShoppingStore = create<ShoppingState & ShoppingActions>()(
       setHasOnboarded: (value) => set({ hasOnboarded: value }),
 
       reset: () => set(initialState),
+
+      setItems: (items) => set({ items }),
+
+      applyServerChanges: ({ upserts, deletes }) => {
+        set((state) => {
+          const map = new Map(state.items.map((i) => [i.id, i]));
+          for (const item of upserts) map.set(item.id, item);
+          for (const id of deletes) map.delete(id);
+          return { items: Array.from(map.values()) };
+        });
+      },
     }),
     {
       name: STORAGE_KEY,
