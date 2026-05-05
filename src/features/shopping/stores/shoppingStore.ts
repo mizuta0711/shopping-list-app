@@ -23,8 +23,6 @@ type ShoppingActions = {
   deleteItem: (id: string) => void;
   /** アイテム名のみを編集する。`updatedAt` も更新（Phase 9 同期 LWW 用） */
   updateItemName: (id: string, name: string) => void;
-  /** 削除アンドゥ用に元アイテムを復元（id・order・createdAt を維持） */
-  restoreItem: (item: ShoppingItem) => void;
   setSort: (sort: SortKey) => void;
   setHasOnboarded: (value: boolean) => void;
   reset: () => void;
@@ -215,13 +213,6 @@ export const useShoppingStore = create<ShoppingState & ShoppingActions>()(
             i.id === id ? { ...i, name: trimmed, updatedAt: now } : i,
           ),
         }));
-      },
-
-      restoreItem: (item) => {
-        set((state) => {
-          if (state.items.some((i) => i.id === item.id)) return state;
-          return { items: [...state.items, item] };
-        });
       },
 
       setSort: (sort) => set({ sort }),

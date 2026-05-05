@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RefreshCw, ShoppingCart } from "lucide-react";
+import { Pencil, RefreshCw, ShoppingCart } from "lucide-react";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { toast } from "sonner";
 import {
@@ -41,11 +41,11 @@ export function ShoppingMainView() {
   const [activeScope, setActiveScope] = useState<ItemScope>("TODAY");
   // セッション中だけ表示しておく購入済みアイテムの ID 集合（誤タップ救済用）
   const [keptPurchasedIds, setKeptPurchasedIds] = useState<string[]>([]);
-  // スワイプで開いている行（同時に 1 行のみ）
-  const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
+  // 編集モード（右上 Pencil で切り替え）: 編集/削除/並び替え操作を有効化
+  const [editMode, setEditMode] = useState(false);
   // 編集中アイテム（モーダル表示）
   const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
-  // モーダルを閉じた後にフォーカスを戻すドラッグハンドルの aria-label 用に編集前の ID を保持
+  // モーダルを閉じた後にフォーカスを戻す編集ボタンの ID を保持
   const editingItemIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -65,7 +65,6 @@ export function ShoppingMainView() {
   const reorderItems = useShoppingStore((state) => state.reorderItems);
   const deleteItem = useShoppingStore((state) => state.deleteItem);
   const updateItemName = useShoppingStore((state) => state.updateItemName);
-  const restoreItem = useShoppingStore((state) => state.restoreItem);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -133,12 +132,9 @@ export function ShoppingMainView() {
     setKeptPurchasedIds([]);
   }, []);
 
-  const handleSwipeOpenChange = useCallback(
-    (id: string, open: boolean) => {
-      setOpenSwipeId(open ? id : (prev) => (prev === id ? null : prev));
-    },
-    [],
-  );
+  const handleToggleEditMode = useCallback(() => {
+    setEditMode((prev) => !prev);
+  }, []);
 
   const handleEditRequest = useCallback((item: ShoppingItem) => {
     editingItemIdRef.current = item.id;
@@ -148,7 +144,7 @@ export function ShoppingMainView() {
   const returnFocusToHandle = useCallback(() => {
     const id = editingItemIdRef.current;
     if (!id) return;
-    // data-item-id 属性でドラッグハンドルを特定してフォーカスを戻す
+    // data-item-id 属性で編集ボタンを特定してフォーカスを戻す
     const handleById = document.querySelector<HTMLButtonElement>(
       `button[data-item-id="${id}"]`,
     );
@@ -173,22 +169,14 @@ export function ShoppingMainView() {
 
   const handleDeleteRequest = useCallback(
     (item: ShoppingItem) => {
-      // 即時削除（アンドゥトーストで取り消し可能）
-      // スワイプを閉じてからアイテムを削除（アンドゥ復元時に再オープンしないよう先にリセット）
-      setOpenSwipeId(null);
+      const confirmed = window.confirm(
+        `「${item.name}」を削除します。よろしいですか？`,
+      );
+      if (!confirmed) return;
       deleteItem(item.id);
-      toast(`「${item.name}」を削除しました`, {
-        duration: 5000,
-        action: {
-          label: "元に戻す",
-          onClick: () => {
-            restoreItem(item);
-            toast.success(`「${item.name}」を復元しました`);
-          },
-        },
-      });
+      toast.success(`「${item.name}」を削除しました`);
     },
-    [deleteItem, restoreItem],
+    [deleteItem],
   );
 
   const handleDragEnd = useCallback(
@@ -257,6 +245,17 @@ export function ShoppingMainView() {
           )}
         </button>
         <SortMenu active={sort} onChange={setSort} />
+        <button
+          type="button"
+          onClick={handleToggleEditMode}
+          aria-label={editMode ? "編集モードを終了" : "編集モードを開始"}
+          aria-pressed={editMode}
+          className={`flex h-9 w-9 items-center justify-center rounded-full transition active:bg-gray-100 ${
+            editMode ? "bg-gray-900 text-white active:bg-gray-700" : "text-gray-700"
+          }`}
+        >
+          <Pencil className="h-5 w-5" aria-hidden />
+        </button>
       </header>
 
       <ScopeTabs
@@ -288,10 +287,7 @@ export function ShoppingMainView() {
                       item={item}
                       onToggle={handleToggle}
                       onMoveScope={handleMoveScope}
-                      swipeOpen={openSwipeId === item.id}
-                      onSwipeOpenChange={(open) =>
-                        handleSwipeOpenChange(item.id, open)
-                      }
+                      editMode={editMode}
                       onEditRequest={handleEditRequest}
                       onDeleteRequest={handleDeleteRequest}
                     />

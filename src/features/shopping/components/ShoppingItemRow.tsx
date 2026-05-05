@@ -8,7 +8,9 @@ type Props = {
   item: ShoppingItem;
   onToggle: (id: string) => void;
   onMoveScope: (id: string, targetScope: ItemScope) => void;
-  /** 行末に追加表示する要素（ドラッグハンドル等） */
+  /** 編集モード中はスコープ移動ボタンを隠し、trailing（編集/削除/ハンドル）に置き換える */
+  editMode?: boolean;
+  /** 行末に追加表示する要素（編集モード時の操作ボタン群、ドラッグハンドル等） */
   trailing?: ReactNode;
 };
 
@@ -16,6 +18,7 @@ export const ShoppingItemRow = memo<Props>(function ShoppingItemRow({
   item,
   onToggle,
   onMoveScope,
+  editMode = false,
   trailing,
 }) {
   const isPurchased = item.status === "PURCHASED";
@@ -71,7 +74,7 @@ export const ShoppingItemRow = memo<Props>(function ShoppingItemRow({
           {item.name}
         </span>
       </button>
-      {!isPurchased && (
+      {!isPurchased && !editMode && (
         <button
           type="button"
           onClick={handleMove}
