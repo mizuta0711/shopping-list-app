@@ -144,4 +144,4 @@ const handleDeleteRequest = useCallback(
 
 | 版数 | 日付 | コミット | 内容 | 担当 |
 |------|------|---------|------|------|
-| 1.0 | 2026-05-05 | (未確定) | 初版（Phase 11 撤廃 + 編集モード切替 UI に置換）。実装 + browser-test 通過済み | Claude Code |
+| 1.0 | 2026-05-05 | e8e5c05 | 初版（Phase 11 撤廃 + 編集モード切替 UI に置換）。実装 + browser-test 通過済み | Claude Code |
