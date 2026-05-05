@@ -1,5 +1,4 @@
-// npx tsx tools/export-to-sql.ts
-// データベースエクスポートツール (v1.0.0)
+// データベースエクスポートツール (v1.1.0)
 //
 // 機能:
 // - 全テーブルの TRUNCATE + INSERT 文を生成
@@ -7,8 +6,14 @@
 // - text[] 配列、JSON、日付、boolean に対応
 // - zip 圧縮バックアップ（同日複数回対応）
 //
-// 使用方法:
-// npx tsx tools/export-to-sql.ts
+// 使用方法（推奨）:
+//   npm run db:backup
+//
+// 直接実行する場合（.env.local を明示的に読み込む）:
+//   npx tsx --env-file=.env.local tools/export-to-sql.ts
+//
+// ⚠️ DATABASE_URL 環境変数が必要。`npx tsx tools/export-to-sql.ts` を直接実行すると
+//    Next.js の .env.local は自動読み込みされないので Prisma が初期化エラーになる。
 //
 // 出力:
 // tools/dump.sql                    - PostgreSQL 用 SQL ファイル
