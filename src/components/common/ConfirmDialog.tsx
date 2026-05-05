@@ -83,14 +83,14 @@ export const ConfirmDialog = forwardRef<ConfirmDialogHandle, Props>(
             <button
               type="button"
               onClick={close}
-              className="rounded-md px-4 py-2 text-sm text-gray-700 transition active:bg-gray-100"
+              className="min-h-[44px] rounded-md px-4 py-2 text-sm text-gray-700 transition active:bg-gray-100"
             >
               {cancelLabel}
             </button>
             <button
               type="button"
               onClick={handleConfirm}
-              className={`rounded-md px-4 py-2 text-sm font-medium text-white transition active:opacity-80 ${
+              className={`min-h-[44px] rounded-md px-4 py-2 text-sm font-medium text-white transition active:opacity-80 ${
                 destructive ? "bg-red-600" : "bg-emerald-600"
               }`}
             >

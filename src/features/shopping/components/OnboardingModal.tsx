@@ -77,6 +77,8 @@ export const OnboardingModal = memo(function OnboardingModal() {
   );
 });
 
+OnboardingModal.displayName = "OnboardingModal";
+
 function GoogleIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 48 48" className={className} aria-hidden>

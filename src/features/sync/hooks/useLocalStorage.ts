@@ -8,21 +8,28 @@ import { useCallback, useEffect, useState } from "react";
  * - useEffect で localStorage から読み込み、値があれば差し替える
  * - キー引数が null の場合は no-op（未ログイン時の useInitialMerge で利用）
  * - JSON parse 失敗 / アクセス拒否（プライベートモード）/ 容量超過は握りつぶす
+ * - hydrated フラグを返すことで、localStorage 読み込み完了前の誤判定（二重マージ等）を防ぐ
  */
 export function useLocalStorage<T>(
   key: string | null,
   defaultValue: T,
-): [T, (value: T) => void] {
+): [T, (value: T) => void, boolean] {
   const [value, setValue] = useState<T>(defaultValue);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined" || key === null) return;
+    if (typeof window === "undefined" || key === null) {
+      // null キー時はすぐに hydrated とみなす（no-op の場合は待機不要）
+      setHydrated(true);
+      return;
+    }
     try {
       const raw = window.localStorage.getItem(key);
       if (raw !== null) setValue(JSON.parse(raw) as T);
     } catch {
       // parse 失敗 or アクセス拒否 → defaultValue のまま
     }
+    setHydrated(true);
   }, [key]);
 
   const setAndPersist = useCallback(
@@ -38,5 +45,5 @@ export function useLocalStorage<T>(
     [key],
   );
 
-  return [value, setAndPersist];
+  return [value, setAndPersist, hydrated];
 }

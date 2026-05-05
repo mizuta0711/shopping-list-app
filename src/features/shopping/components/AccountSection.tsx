@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -10,6 +11,7 @@ import {
 } from "@/components/common/ConfirmDialog";
 import { useShoppingStore } from "@/features/shopping/stores/shoppingStore";
 import { useSyncStore } from "@/features/sync/stores/syncStore";
+import { useSyncOrchestrator } from "@/components/providers/SyncProvider";
 
 function formatRelative(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -26,6 +28,8 @@ export function AccountSection() {
   const { data: session, status } = useSession();
   const lastSyncedAt = useSyncStore((s) => s.lastSyncedAt);
   const dialogRef = useRef<ConfirmDialogHandle>(null);
+  const router = useRouter();
+  const orchestrator = useSyncOrchestrator();
 
   const handleLogin = useCallback(() => {
     void signIn("google", { callbackUrl: "/" });
@@ -37,6 +41,8 @@ export function AccountSection() {
 
   const handleLogoutConfirm = useCallback(
     async ({ checked }: { checked: boolean }) => {
+      // 進行中の同期リクエストを打ち切る（signOut 後の 401 ループを防ぐ）
+      orchestrator?.stop();
       const userId = session?.user?.id;
       if (userId) {
         try {
@@ -47,12 +53,20 @@ export function AccountSection() {
       }
       if (checked) {
         useShoppingStore.getState().reset();
+        // ローカルクリア時のみ syncStore も初期化（lastUpdatedAt も含めて）。
+        // 保持時は signOut → useSyncOnMount が status="logged_out" にする経路に任せて
+        // lastUpdatedAt を温存し、再ログイン時の差分取得起点として使う。
+        useSyncStore.getState().reset();
+      } else {
+        useSyncStore.getState().setStatus("logged_out");
       }
-      useSyncStore.getState().reset();
-      await signOut({ callbackUrl: "/" });
+      // callbackUrl によるフルリロードより前にトーストを表示するため redirect: false を使い、
+      // toast 表示後に手動でルーティングする
+      await signOut({ redirect: false });
       toast.success("ログアウトしました");
+      router.push("/");
     },
-    [session?.user?.id],
+    [session?.user?.id, orchestrator],
   );
 
   if (status === "loading") {

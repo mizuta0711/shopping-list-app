@@ -1452,10 +1452,61 @@ await signOut({ callbackUrl: "/" });
 
 ### 将来タスク（Phase 9.1 以降）
 
-- アカウント削除 UI + API（GDPR 対応）
-- `DeletionTombstone` の定期クリーンアップバッチ（30日経過分削除）
-- レート制限の本格実装
-- tombstone 方式による削除の更新時刻ベース同期（hard delete から soft delete への移行検討）
+Phase 9 のレビュー・ブラウザテストで「次フェーズ検討」「許容（将来対応）」とした項目をカテゴリ別に整理する。Phase 横断の課題は [docs/設計書/技術負債と将来課題.md](../設計書/技術負債と将来課題.md) に転記済み。
+
+#### 機能追加（Phase 9 では未実装）
+
+| # | 内容 | 優先度 | 出典 |
+|---|------|-------|------|
+| F-1 | アカウント削除 UI + API（GDPR 対応）。`User` Cascade 削除は定義済みだが UI / API ルートが未実装 | 中 | tech レビュー T15 |
+| F-2 | `DeletionTombstone` の定期クリーンアップバッチ（30日経過分削除）。Vercel Cron 等で実装 | 中 | T15 / 自発 |
+| F-3 | レート制限の本格実装（Vercel Edge IP 制限 or Upstash Redis） | 低 | tech レビュー T16 |
+| F-4 | tombstone 方式による削除の更新時刻ベース同期（hard delete → soft delete への移行検討） | 低 | Stage 1 §1 削除の同期 |
+| F-5 | 監査ログのテーブル化（現状は console.log + Vercel Function ログのみ） | 低 | tech レビュー T18 |
+
+#### バグ・正確性向上
+
+| # | 内容 | 優先度 | 関連箇所 | 出典 |
+|---|------|-------|---------|------|
+| B-1 | `pushPendingNow` 失敗時に `consumePending()` で pending が消えてしまい、リトライ不可。エラー時に pending を戻すロジックが必要 | 中 | `src/features/sync/services/syncOrchestrator.ts` | code-review #8 (2回目) |
+| B-2 | `syncOrchestrator.handleError` で 4xx 時に `console.error` を追加（現状は status="error" 設定のみで開発時に原因が分かりづらい） | 低 | 同上 | code-review #6 (2回目) |
+| B-3 | factory 関数の `prevSnapshot` 初期化が宣言時と `start()` の両方で行われている（軽微な重複） | 低 | 同上 | code-review #15 (2回目) |
+
+#### 型安全性・リファクタリング
+
+| # | 内容 | 優先度 | 関連箇所 | 出典 |
+|---|------|-------|---------|------|
+| R-1 | `src/lib/api/dto.ts` の `as ItemScope` / `as ItemStatus` キャスト → Zod の `z.enum().parse()` で型安全化（Prisma の String カラムを使っているため必要） | 低 | `dto.ts` L9-10 | code-review #6 (1回目) |
+| R-2 | `reconcile` / `syncOrchestrator` の `as ShoppingItem` / `as ShoppingItem[]` キャスト → 型安全な変換関数に置き換える | 低 | `reconcile.ts`, `syncOrchestrator.ts` | code-review #4 (2回目) |
+| R-3 | `itemToDTO` 関数が `useInitialMerge` と `syncOrchestrator` で重複定義されている → `src/features/sync/services/dto.ts` 等に共通化 | 低 | 上記2ファイル | code-review #5 (2回目) |
+| R-4 | PUT `/api/sync/items` の upserts ループが `findUnique` × N で N+1 になる。`findMany({ where: { id: { in: ids } } })` でバッチ取得 → Map 化に置き換え | 中 | `src/app/api/sync/items/route.ts` PUT | code-review #2 (1回目) |
+| R-5 | tombstone upsert ループの N+1（Prisma に upsertMany がない構造的制約）。raw SQL `ON CONFLICT DO UPDATE` で対応する選択肢あり | 低 | 同上 | code-review #3 (1回目) |
+| R-6 | 設計書 §4-12 影響ファイル一覧に `LoginButton.tsx` が記載されているが未実装（代替として `AccountSection.tsx` 内にログインボタンを統合した）。設計書から削除する整理が必要 | 低 | 本設計書 §4-12 | code-review #16 (2回目) |
+
+#### UX 改善（Phase 9 内のみ）
+
+| # | 内容 | 優先度 | 関連箇所 | 出典 |
+|---|------|-------|---------|------|
+| U-1 | `/login` の「後で（ログインなしで使う）」リンクのタッチターゲット高さが 20px (推奨 44px 未満)。`py-2 px-4` 等の padding 追加で 44px 確保 | 中 | `src/app/login/page.tsx` | ブラウザテスト #1 (2026-05-05) |
+
+#### 動作確認の積み残し（手動テスト推奨）
+
+実機 Google アカウントが必要なため、ブラウザテスト（Playwright MCP）で自動化できなかったシナリオ。Phase 9 リリース前に手動で消化する:
+- M1: 未ログイン → ログイン → 既存ローカルデータがマージされる + `uploadedCount` / `downloadedCount` トースト
+- M2: ログイン中の編集が debounce 1.5s 後に PUT 1回でまとめて送信
+- M3: 別タブで同じアカウントログイン → 同じリスト表示
+- M4: オフライン編集 → 復帰時の自動送信、ヘッダードット色変化
+- M5: ログアウト（ローカル保持）→ 再ログインで同じリスト復元
+- M6: ログアウト（ローカル削除）→ メイン画面が空 + OnboardingModal 再表示
+- E1-E6: エッジケース全般（同時編集 LWW、別端末削除の伝播、OAuth 失敗、5xx リトライ、クロックずれ、別ユーザーログイン）
+
+#### 横断課題（別ドキュメントへ転記済み）
+
+- ヘッダーアイコン全般 36×36px → 44px 化 → `技術負債と将来課題.md` UX-1
+- `ShoppingMainView` の memo 化 → 同 PERF-1
+- `formatRelative` の共通化 → 同 MAINT-1
+- `withAuth()` ラッパーの本格実装 → 同 MAINT-2
+- API パスバージョニング (`/v1/`) の戦略 → 同 OPS-1
 
 ---
 
@@ -1468,3 +1519,4 @@ await signOut({ callbackUrl: "/" });
 | 1.2 | 2026-05-04 | (未確定) | Stage 2 技術設計ドラフト記入（DB スキーマ、API 設計、共有型、同期サービス、UI 実装方針）。NextAuth バージョン選定はユーザー判断待ち | Claude Code |
 | 1.3 | 2026-05-04 | (未確定) | Auth.js v5 採用確定。Stage 1 改訂（OnboardingModal 最終ステップに「Google でログイン / ログインせず使う」二択ボタン追加）。Stage 2 レビュー指摘対応（T1-T19、19件反映: route.ts パス修正・API ラッパー方針確定・PUT/POST レスポンス JSON 例追加・所有権チェック修正・共有型 DTO 分離・hasMerged キー修正・GET serverDeletes 追加・DeletionTombstone モデル追加・クロックずれ補正方針明示・syncStore partialize 明示・API パスバージョニング方針確定・since:null 扱い明示・LWW 同値時挙動明文化・deleteItem 検知擬似コード追加・GDPR/レート制限/監査ログ将来タスク化・dialog 実装パターン追加・STATUS_LABEL 定義追加）。`.env.example` を Phase 9 用に更新 | Claude Code |
 | 1.4 | 2026-05-04 | (未確定) | Stage 2 2回目レビュー指摘対応（N1-N15、15件反映: POST merge レスポンス JSON 例追加・ShoppingItemDTO を Omit 型に変更・GET/POST の Zod スキーマ追加・PUT スキーマに strict() で userId 拒否・DeletionTombstone を upsert 方針に変更・syncOrchestrator を factory 関数化 + クライアント専用ガード・useLocalStorage 実装仕様追記・SyncPushResponse 系も DTO 型に統一・GET の不正 since 扱い明示・§4-12 ファイル一覧の精緻化・§4-13 OnboardingModal 改訂表現修正・§4-14 レビュー記録更新）。Stage 2 を ✅ 確定 | Claude Code |
+| 1.5 | 2026-05-05 | (未確定) | §7「将来タスク (Phase 9.1 以降)」を充実。コードレビュー2回 + ブラウザテストで「次フェーズ検討」とした項目を、機能追加 (F-1〜F-5) / バグ・正確性 (B-1〜B-3) / 型安全性・リファクタリング (R-1〜R-6) / UX (U-1) / 手動テスト積み残し (M1-M6, E1-E6) の5カテゴリに整理。横断課題は新設の `docs/設計書/技術負債と将来課題.md` に転記 | Claude Code |

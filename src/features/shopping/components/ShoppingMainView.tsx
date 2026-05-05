@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { History, RefreshCw, Settings, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
-import { SyncStatusDot } from "@/features/sync/components/SyncStatusDot";
+import {
+  STATUS_LABEL,
+  SyncStatusDot,
+} from "@/features/sync/components/SyncStatusDot";
 import {
   SyncStatusSheet,
   type SyncStatusSheetHandle,
@@ -160,7 +163,7 @@ export function ShoppingMainView() {
           aria-label={
             syncStatus === "logged_out"
               ? "買い物リスト"
-              : `同期状態を表示`
+              : `同期状態: ${STATUS_LABEL[syncStatus]} (タップで詳細)`
           }
           disabled={syncStatus === "logged_out"}
           className="relative ml-1 flex h-9 w-9 items-center justify-center rounded-full text-gray-900 transition active:bg-gray-100 disabled:cursor-default disabled:active:bg-transparent"

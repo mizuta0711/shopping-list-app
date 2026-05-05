@@ -34,13 +34,15 @@ export function useInitialMerge() {
   const { data: session, status } = useSession();
   const userId = session?.user?.id;
   const orchestrator = useSyncOrchestrator();
-  const [hasMerged, setHasMerged] = useLocalStorage<boolean>(
+  const [hasMerged, setHasMerged, hasMergedHydrated] = useLocalStorage<boolean>(
     userId ? HAS_MERGED_KEY(userId) : null,
     false,
   );
 
   useEffect(() => {
     if (status !== "authenticated" || !userId || !orchestrator) return;
+    // localStorage の水和完了を待ってから分岐判定する（未水和のまま merge を発火させない）
+    if (!hasMergedHydrated) return;
 
     if (hasMerged === true) {
       // マージ済み → 通常の差分取得
@@ -60,5 +62,5 @@ export function useInitialMerge() {
         `ローカルから${res.uploadedCount}件をサーバーへ送信、サーバーから${res.downloadedCount}件取得しました`,
       );
     })();
-  }, [status, userId, hasMerged, orchestrator, setHasMerged]);
+  }, [status, userId, hasMerged, hasMergedHydrated, orchestrator, setHasMerged]);
 }
