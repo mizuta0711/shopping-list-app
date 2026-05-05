@@ -1,5 +1,10 @@
-import type { ShoppingItem } from "@/features/shopping/types";
-import type { ShoppingItemDTO, SyncPushResponse } from "@/types/sync";
+import type { ShoppingItem, ShoppingSet } from "@/features/shopping/types";
+import type {
+  SetsSyncPushResponse,
+  ShoppingItemDTO,
+  ShoppingSetDTO,
+  SyncPushResponse,
+} from "@/types/sync";
 
 /**
  * サーバーからの差分をローカル状態にマージする純粋関数。
@@ -35,6 +40,38 @@ export function reconcile(params: {
   }
 
   // 3. サーバー側の削除を反映
+  for (const id of serverDeletes) map.delete(id);
+
+  return { next: Array.from(map.values()), overwrittenCount };
+}
+
+/**
+ * Phase 10.1b: ShoppingSet 用 reconcile。
+ * 構造は items と同じ（LWW + rejected 採用 + serverDeletes 反映）。
+ */
+export function reconcileSets(params: {
+  local: ShoppingSet[];
+  serverChanges: ShoppingSetDTO[];
+  serverDeletes: string[];
+  rejected: SetsSyncPushResponse["rejected"];
+}): { next: ShoppingSet[]; overwrittenCount: number } {
+  const { local, serverChanges, serverDeletes, rejected } = params;
+
+  const map = new Map<string, ShoppingSet>(local.map((s) => [s.id, s]));
+
+  for (const s of serverChanges) {
+    const l = map.get(s.id);
+    if (!l || l.updatedAt < s.updatedAt) {
+      map.set(s.id, s);
+    }
+  }
+
+  let overwrittenCount = 0;
+  for (const r of rejected) {
+    map.set(r.id, r.serverSet);
+    overwrittenCount++;
+  }
+
   for (const id of serverDeletes) map.delete(id);
 
   return { next: Array.from(map.values()), overwrittenCount };

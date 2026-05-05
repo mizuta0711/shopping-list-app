@@ -1,6 +1,6 @@
 # ER図
 
-Phase 9 (クラウド同期) で導入された 6 テーブル。Auth.js v5 標準モデル (User / Account / Session / VerificationToken) + アプリ固有モデル (ShoppingItem / DeletionTombstone)。
+Phase 9 (クラウド同期) で導入された 6 テーブル + Phase 10.1b (セット同期) で追加された 2 テーブル。Auth.js v5 標準モデル (User / Account / Session / VerificationToken) + アプリ固有モデル (ShoppingItem / DeletionTombstone / ShoppingSet / SetDeletionTombstone)。
 
 ```mermaid
 erDiagram
@@ -8,6 +8,8 @@ erDiagram
     User ||--o{ Session : "has"
     User ||--o{ ShoppingItem : "owns"
     User ||--o{ DeletionTombstone : "tracks"
+    User ||--o{ ShoppingSet : "owns"
+    User ||--o{ SetDeletionTombstone : "tracks"
 
     User {
         string id PK
@@ -65,6 +67,22 @@ erDiagram
         string itemId "削除された ShoppingItem.id"
         datetime deletedAt "サーバー時刻"
     }
+
+    ShoppingSet {
+        string id PK "クライアント発行 UUID v4"
+        string userId FK
+        string name
+        string[] items "アイテム名配列 (PostgreSQL TEXT[])"
+        datetime createdAt "クライアント発行"
+        datetime updatedAt "LWW 判定キー (クライアント発行)"
+    }
+
+    SetDeletionTombstone {
+        string id PK
+        string userId FK
+        string setId "削除された ShoppingSet.id"
+        datetime deletedAt "サーバー時刻"
+    }
 ```
 
 ## 主要な制約・インデックス
@@ -79,6 +97,9 @@ erDiagram
 | `ShoppingItem` | `[userId, scope, status]` INDEX | 一覧取得 |
 | `DeletionTombstone` | `[userId, itemId]` UNIQUE | 削除 → 再作成 → 再削除での upsert 対応 |
 | `DeletionTombstone` | `[userId, deletedAt]` INDEX | 差分削除トラッキング |
+| `ShoppingSet` | `[userId, updatedAt]` INDEX | GET の `since` 差分取得 |
+| `SetDeletionTombstone` | `[userId, setId]` UNIQUE | セット削除 → 再作成 → 再削除での upsert 対応 |
+| `SetDeletionTombstone` | `[userId, deletedAt]` INDEX | セット差分削除トラッキング |
 
 ## Cascade 削除
 
@@ -91,3 +112,4 @@ erDiagram
 | 版数 | 日付 | コミット | 内容 | 担当 |
 |------|------|---------|------|------|
 | 1.0 | 2026-05-04 | (未確定) | 初版作成。Phase 9 で導入された 6 テーブルの ER 図を mermaid で記載 | Claude Code |
+| 1.1 | 2026-05-05 | (未確定) | Phase 10.1b でセット同期 2 テーブル (ShoppingSet / SetDeletionTombstone) と User からの relations を追加 | Claude Code |

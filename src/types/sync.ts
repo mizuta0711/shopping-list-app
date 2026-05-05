@@ -1,4 +1,4 @@
-import type { ShoppingItem } from "@/features/shopping/types";
+import type { ShoppingItem, ShoppingSet } from "@/features/shopping/types";
 
 /**
  * クライアント送受信に使う ShoppingItem DTO。
@@ -58,6 +58,60 @@ export type SyncMergeRequest = {
 /** POST /api/sync/merge のレスポンス data */
 export type SyncMergeResponse = {
   finalItems: ShoppingItemDTO[];
+  uploadedCount: number;
+  downloadedCount: number;
+  serverTime: string;
+  lastUpdatedAt: string | null;
+};
+
+// =============================================================
+// Phase 10.1b: ShoppingSet 同期用の型
+// =============================================================
+
+/**
+ * クライアント送受信に使う ShoppingSet DTO。
+ * ShoppingSet には元々 userId が含まれないが、API DTO であることを明示する。
+ * サーバー側 upsert 時は `userId: session.user.id` で必ず上書きする。
+ */
+export type ShoppingSetDTO = ShoppingSet;
+
+/** GET /api/sync/sets のレスポンス data */
+export type SetsSyncPullResponse = {
+  sets: ShoppingSetDTO[];
+  serverDeletes: string[];
+  serverTime: string;
+  lastUpdatedAt: string | null;
+};
+
+/** PUT /api/sync/sets のリクエスト */
+export type SetsSyncPushRequest = {
+  upserts: ShoppingSetDTO[];
+  deletedIds: string[];
+  since: string | null;
+};
+
+/** PUT /api/sync/sets のレスポンス data */
+export type SetsSyncPushResponse = {
+  applied: ShoppingSetDTO[];
+  rejected: Array<{
+    id: string;
+    reason: "SERVER_NEWER";
+    serverSet: ShoppingSetDTO;
+  }>;
+  serverChanges: ShoppingSetDTO[];
+  serverDeletes: string[];
+  serverTime: string;
+  lastUpdatedAt: string | null;
+};
+
+/** POST /api/sync/sets/merge のリクエスト */
+export type SetsSyncMergeRequest = {
+  localSets: ShoppingSetDTO[];
+};
+
+/** POST /api/sync/sets/merge のレスポンス data */
+export type SetsSyncMergeResponse = {
+  finalSets: ShoppingSetDTO[];
   uploadedCount: number;
   downloadedCount: number;
   serverTime: string;

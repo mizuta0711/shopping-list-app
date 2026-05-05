@@ -53,6 +53,8 @@ const ORDERED_TABLES: string[] = [
   "session",
   "shoppingItem",
   "deletionTombstone",
+  "shoppingSet",
+  "setDeletionTombstone",
 ];
 
 /**
@@ -66,6 +68,8 @@ const DB_TABLE_MAP: Record<string, string> = {
   verificationToken: 'public."VerificationToken"',
   shoppingItem: 'public."ShoppingItem"',
   deletionTombstone: 'public."DeletionTombstone"',
+  shoppingSet: 'public."ShoppingSet"',
+  setDeletionTombstone: 'public."SetDeletionTombstone"',
 };
 
 // ========================================

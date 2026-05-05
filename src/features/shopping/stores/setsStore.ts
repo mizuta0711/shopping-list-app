@@ -18,6 +18,13 @@ type SetsActions = {
   updateSet: (id: string, name: string, items: string[]) => void;
   deleteSet: (id: string) => void;
   reset: () => void;
+  /** Phase 10.1b: 同期サービスがサーバー全件で上書きする時に使う（マージ完了時など） */
+  setSets: (sets: ShoppingSet[]) => void;
+  /** Phase 10.1b: 同期サービスがサーバー差分を反映する時に使う（reconcile 結果の適用） */
+  applyServerChanges: (params: {
+    upserts: ShoppingSet[];
+    deletes: string[];
+  }) => void;
 };
 
 const initialState: SetsState = { sets: [] };
@@ -82,6 +89,17 @@ export const useSetsStore = create<SetsState & SetsActions>()(
       },
 
       reset: () => set(initialState),
+
+      setSets: (sets) => set({ sets }),
+
+      applyServerChanges: ({ upserts, deletes }) => {
+        set((state) => {
+          const map = new Map(state.sets.map((s) => [s.id, s] as const));
+          for (const u of upserts) map.set(u.id, u);
+          for (const id of deletes) map.delete(id);
+          return { sets: Array.from(map.values()) };
+        });
+      },
     }),
     {
       name: SETS_STORAGE_KEY,

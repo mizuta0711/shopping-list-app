@@ -37,6 +37,9 @@ Auth.js v5 の `handlers` を `src/lib/auth.ts` から re-export。Google OAuth 
 | GET | `/api/sync/items` | 全件 / 差分取得 | 必須 | Phase 9 |
 | PUT | `/api/sync/items` | 楽観的更新 (push + LWW + 他端末差分取得) | 必須 | Phase 9 |
 | POST | `/api/sync/merge` | 初回ログイン時のローカル全件マージ | 必須 | Phase 9 |
+| GET | `/api/sync/sets` | セット全件 / 差分取得 | 必須 | Phase 10.1b |
+| PUT | `/api/sync/sets` | セット楽観的更新 (push + LWW + 他端末差分取得) | 必須 | Phase 10.1b |
+| POST | `/api/sync/sets/merge` | 初回ログイン時のセットローカル全件マージ | 必須 | Phase 10.1b |
 
 ### `GET /api/sync/items`
 
@@ -195,6 +198,156 @@ z.object({
 }
 ```
 
+### `GET /api/sync/sets`
+
+サーバー側のセットを取得。`since` 指定時は差分のみ。
+
+**クエリパラメータ:**
+- `since` (string, optional): ISO 8601 日時。指定時は `updatedAt > since` のセットのみ返す
+
+**Zod スキーマ:**
+```ts
+z.object({ since: z.string().datetime().optional() })
+```
+
+**リクエスト例:**
+```
+GET /api/sync/sets?since=2026-05-05T07:00:00.000Z
+```
+
+**レスポンス例 (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "sets": [
+      {
+        "id": "uuid-1",
+        "name": "カレーセット",
+        "items": ["玉ねぎ", "じゃがいも", "カレールー"],
+        "createdAt": "2026-05-04T12:00:00.000Z",
+        "updatedAt": "2026-05-05T08:00:00.000Z"
+      }
+    ],
+    "serverDeletes": ["uuid-2"],
+    "serverTime": "2026-05-05T10:00:00.000Z",
+    "lastUpdatedAt": "2026-05-05T08:00:00.000Z"
+  }
+}
+```
+
+**サーバー処理の要点:**
+- `since` 未指定なら全セット取得 / 指定時は `updatedAt > since` のみ
+- `serverDeletes` は `SetDeletionTombstone.deletedAt > since` の `setId` 配列
+- `lastUpdatedAt` はクライアントが次回 `since` として使う基準時刻（最新 `updatedAt` または `serverTime`）
+
+### `PUT /api/sync/sets`
+
+debounce 後にローカルのセット変更をまとめて送信。サーバーは LWW 判定 + 他端末差分を返す。
+
+**Zod スキーマ:**
+```ts
+const ShoppingSetSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(50),
+  items: z.array(z.string()).max(100),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+}).strict(); // userId 等の余分フィールドを 400 で拒否
+
+z.object({
+  upserts: z.array(ShoppingSetSchema).max(500),
+  deletedIds: z.array(z.string().uuid()).max(500),
+  since: z.string().datetime().nullable(),
+}).strict();
+```
+
+**リクエスト例:**
+```json
+{
+  "upserts": [
+    {
+      "id": "uuid-1",
+      "name": "カレーセット",
+      "items": ["玉ねぎ", "じゃがいも", "カレールー"],
+      "createdAt": "2026-05-04T12:00:00.000Z",
+      "updatedAt": "2026-05-05T08:00:00.000Z"
+    }
+  ],
+  "deletedIds": ["uuid-2"],
+  "since": "2026-05-05T07:00:00.000Z"
+}
+```
+
+**レスポンス例 (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "applied": [ /* 書き込まれた最新セット */ ],
+    "rejected": [
+      {
+        "id": "...",
+        "reason": "SERVER_NEWER",
+        "serverSet": { /* クライアントが採用すべき最新版 */ }
+      }
+    ],
+    "serverChanges": [ /* since 以降の他端末からの変更 */ ],
+    "serverDeletes": ["uuid-dead-0001"],
+    "serverTime": "2026-05-05T10:36:01.456Z",
+    "lastUpdatedAt": "2026-05-05T10:36:00.000Z"
+  }
+}
+```
+
+**サーバー処理の要点:**
+1. `requireSession()` で userId 取得
+2. Zod バリデーション（`.strict()` で userId 偽装拒否）
+3. `prisma.$transaction` 内で:
+   - `upserts`: LWW 判定 (`existing.updatedAt >= input.updatedAt` ならスキップして `rejected` に積む)。upsert 時は必ず `userId: session.user.id` で上書き
+   - `deletedIds`: `WHERE userId AND id IN (...)` で削除 + `SetDeletionTombstone.upsert({ deletedAt: now })`
+   - 他端末差分: `serverChanges` (updatedAt > since)、`serverDeletes` (SetDeletionTombstone.deletedAt > since)
+
+### `POST /api/sync/sets/merge`
+
+初回ログイン時にローカルの既存セットをサーバーへマージ。`uploadedCount` / `downloadedCount` を返してトースト表示に使う。
+
+**Zod スキーマ:**
+```ts
+z.object({
+  localSets: z.array(ShoppingSetSchema).max(500),
+}).strict();
+```
+
+**リクエスト例:**
+```json
+{
+  "localSets": [
+    {
+      "id": "uuid-1",
+      "name": "カレーセット",
+      "items": ["玉ねぎ", "じゃがいも", "カレールー"],
+      "createdAt": "2026-05-04T12:00:00.000Z",
+      "updatedAt": "2026-05-04T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+**レスポンス例 (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "finalSets": [ /* マージ後の全セット */ ],
+    "uploadedCount": 1,
+    "downloadedCount": 2,
+    "serverTime": "2026-05-05T10:40:00.789Z",
+    "lastUpdatedAt": "2026-05-05T08:00:00.000Z"
+  }
+}
+```
+
 ---
 
 ## 改訂履歴
@@ -202,3 +355,4 @@ z.object({
 | 版数 | 日付 | コミット | 内容 | 担当 |
 |------|------|---------|------|------|
 | 1.0 | 2026-05-04 | (未確定) | 初版作成。Phase 9 のクラウド同期 API 3 エンドポイント (GET/PUT /api/sync/items, POST /api/sync/merge) と Auth.js v5 統合エンドポイントを記載 | Claude Code |
+| 1.1 | 2026-05-05 | (未確定) | Phase 10.1b でセット同期 API 3 本 (GET/PUT /api/sync/sets, POST /api/sync/sets/merge) を追加。Zod スキーマ・リクエスト/レスポンス例を記載 | Claude Code |

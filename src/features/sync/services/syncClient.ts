@@ -1,5 +1,10 @@
 import type {
   ApiResponse,
+  SetsSyncMergeRequest,
+  SetsSyncMergeResponse,
+  SetsSyncPullResponse,
+  SetsSyncPushRequest,
+  SetsSyncPushResponse,
   SyncMergeRequest,
   SyncMergeResponse,
   SyncPullResponse,
@@ -101,6 +106,48 @@ export const syncClient = {
   ): Promise<SyncMergeResponse> {
     return fetchWithRetry<SyncMergeResponse>(
       "/api/sync/merge",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+      signal,
+    );
+  },
+
+  // ---------- Phase 10.1b: ShoppingSet 同期 ----------
+
+  async pullSets(
+    args: { since: string | null },
+    signal?: AbortSignal,
+  ): Promise<SetsSyncPullResponse> {
+    const url = args.since
+      ? `/api/sync/sets?since=${encodeURIComponent(args.since)}`
+      : `/api/sync/sets`;
+    return fetchWithRetry<SetsSyncPullResponse>(url, { method: "GET" }, signal);
+  },
+
+  async pushSets(
+    body: SetsSyncPushRequest,
+    signal?: AbortSignal,
+  ): Promise<SetsSyncPushResponse> {
+    return fetchWithRetry<SetsSyncPushResponse>(
+      "/api/sync/sets",
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+      signal,
+    );
+  },
+
+  async mergeSetsOnLogin(
+    body: SetsSyncMergeRequest,
+    signal?: AbortSignal,
+  ): Promise<SetsSyncMergeResponse> {
+    return fetchWithRetry<SetsSyncMergeResponse>(
+      "/api/sync/sets/merge",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

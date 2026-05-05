@@ -25,6 +25,8 @@ model User {
   sessions      Session[]
   shoppingItems ShoppingItem[]
   tombstones    DeletionTombstone[]
+  shoppingSets  ShoppingSet[]
+  setTombstones SetDeletionTombstone[]
 }
 
 /// OAuth プロバイダのアカウント情報（Auth.js 標準）
@@ -100,5 +102,34 @@ model DeletionTombstone {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, itemId])
+  @@index([userId, deletedAt])
+}
+
+/// 買い物セット（クラウド同期対象。Phase 10.1b で追加）
+/// id はクライアント発行 UUID、updatedAt は LWW 判定キー（クライアント発行値を保存）
+model ShoppingSet {
+  id        String   @id /// クライアント発行 UUID v4
+  userId    String   /// 所有ユーザー
+  name      String   /// セット名（最大 50 文字、サーバー側でも slice）
+  items     String[] /// アイテム名の配列（PostgreSQL TEXT[]、最大 100 件）
+  createdAt DateTime /// クライアント発行のタイムスタンプ
+  updatedAt DateTime /// LWW 判定キー（クライアント発行）
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
+}
+
+/// セット削除イベントのトラッキング（since 以降の削除を別端末に伝播するため）
+/// Phase 10.1b で追加。一定期間経過後のバッチ掃除は DeletionTombstone と合わせて Phase 9.1 で対応
+model SetDeletionTombstone {
+  id        String   @id @default(uuid())
+  userId    String   /// 削除を行ったユーザー
+  setId     String   /// 削除された ShoppingSet の id
+  deletedAt DateTime @default(now()) /// サーバー時刻
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, setId])
   @@index([userId, deletedAt])
 }
