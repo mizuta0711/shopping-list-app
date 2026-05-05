@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useRef, type ChangeEvent } from "react";
 import {
-  ArrowLeft,
   ChevronRight,
   Download,
   ListChecks,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { BottomNav } from "@/components/layout/BottomNav";
 import { useShoppingStore } from "../stores/shoppingStore";
 import {
   exportStateToJson,
@@ -65,14 +65,7 @@ export function SettingsView() {
 
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col bg-white">
-      <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-gray-200 bg-white px-2 py-3">
-        <Link
-          href="/"
-          aria-label="メインに戻る"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-gray-700 transition active:bg-gray-100"
-        >
-          <ArrowLeft className="h-5 w-5" aria-hidden />
-        </Link>
+      <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-3">
         <h1 className="flex-1 text-lg font-bold text-gray-900">設定</h1>
       </header>
 
@@ -153,6 +146,8 @@ export function SettingsView() {
           </div>
         </section>
       </div>
+
+      <BottomNav />
     </main>
   );
 }

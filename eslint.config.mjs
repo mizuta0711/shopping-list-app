@@ -8,6 +8,7 @@ export default [
       "node_modules/**",
       "prisma/migrations/**",
       ".claude/hooks/**",
+      "tests/browser-evidence/**",
     ],
   },
   ...tseslint.configs.recommended,

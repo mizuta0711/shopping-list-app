@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { History, RefreshCw, Settings, ShoppingCart } from "lucide-react";
+import { RefreshCw, ShoppingCart } from "lucide-react";
+import { BottomNav } from "@/components/layout/BottomNav";
 import { toast } from "sonner";
 import {
   STATUS_LABEL,
@@ -189,20 +189,6 @@ export function ShoppingMainView() {
           )}
         </button>
         <SortMenu active={sort} onChange={setSort} />
-        <Link
-          href="/history"
-          aria-label="購入済み履歴を開く"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-gray-700 transition active:bg-gray-100"
-        >
-          <History className="h-5 w-5" aria-hidden />
-        </Link>
-        <Link
-          href="/settings"
-          aria-label="設定を開く"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-gray-700 transition active:bg-gray-100"
-        >
-          <Settings className="h-5 w-5" aria-hidden />
-        </Link>
       </header>
 
       <ScopeTabs
@@ -243,9 +229,11 @@ export function ShoppingMainView() {
         )}
       </div>
 
-      <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white">
+      <div className="z-10 border-t border-gray-200 bg-white">
         <AddItemForm scope={activeScope} />
       </div>
+
+      <BottomNav />
 
       {hydrated && !hasOnboarded && <OnboardingModal />}
       <SyncStatusSheet ref={syncSheetRef} />

@@ -81,7 +81,7 @@ export const AddItemForm = memo<Props>(function AddItemForm({ scope }) {
       <form
         ref={formRef}
         onSubmit={handleSubmit}
-        className="flex items-end gap-2 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+        className="flex items-end gap-2 px-4 py-3"
       >
         <button
           ref={openSheetButtonRef}
