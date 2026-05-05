@@ -8,16 +8,20 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useShoppingStore } from "../stores/shoppingStore";
 import {
   exportStateToJson,
   importStateFromFile,
 } from "../utils/exportImport";
+import { AccountSection } from "./AccountSection";
 
 export function SettingsView() {
   const reset = useShoppingStore((state) => state.reset);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { status: sessionStatus } = useSession();
+  const isLoggedIn = sessionStatus === "authenticated";
 
   const handleExport = useCallback(() => {
     const ok = exportStateToJson();
@@ -71,10 +75,17 @@ export function SettingsView() {
       </header>
 
       <div className="flex-1 overflow-y-auto px-4 py-6">
+        <AccountSection />
+
         <section className="mb-8">
           <h2 className="mb-3 px-1 text-xs font-medium uppercase text-gray-500">
             データ
           </h2>
+          {isLoggedIn && (
+            <p className="mb-3 px-1 text-xs text-gray-500">
+              クラウド同期中はエクスポート / インポートはバックアップ用途です。
+            </p>
+          )}
           <div className="flex flex-col gap-2">
             <button
               type="button"

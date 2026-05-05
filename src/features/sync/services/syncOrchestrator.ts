@@ -7,7 +7,7 @@ import type { ShoppingItem } from "@/features/shopping/types";
 import { useSyncStore } from "@/features/sync/stores/syncStore";
 import { reconcile } from "@/features/sync/services/reconcile";
 import { HttpError, syncClient } from "@/features/sync/services/syncClient";
-import type { ShoppingItemDTO } from "@/types/sync";
+import type { ShoppingItemDTO, SyncMergeResponse } from "@/types/sync";
 
 const DEBOUNCE_MS = 1500;
 const FOCUS_PULL_THROTTLE_MS = 60_000;
@@ -29,6 +29,7 @@ type Orchestrator = {
   pullOnce: () => Promise<void>;
   pushPendingNow: () => Promise<void>;
   retry: () => Promise<void>;
+  merge: (localItems: ShoppingItemDTO[]) => Promise<SyncMergeResponse | null>;
 };
 
 const noop: Orchestrator = {
@@ -37,6 +38,7 @@ const noop: Orchestrator = {
   pullOnce: async () => {},
   pushPendingNow: async () => {},
   retry: async () => {},
+  merge: async () => null,
 };
 
 export function createSyncOrchestrator(): Orchestrator {
@@ -212,6 +214,32 @@ export function createSyncOrchestrator(): Orchestrator {
     void pullOnce();
   };
 
+  const merge = async (
+    localItems: ShoppingItemDTO[],
+  ): Promise<SyncMergeResponse | null> => {
+    abortController?.abort();
+    abortController = new AbortController();
+    setSyncing();
+    try {
+      const res = await syncClient.mergeOnLogin(
+        { localItems },
+        abortController.signal,
+      );
+      updateClockSkew(res.serverTime);
+      useShoppingStore.getState().setItems(res.finalItems as ShoppingItem[]);
+      prevSnapshot = useShoppingStore.getState().items;
+      if (res.lastUpdatedAt) {
+        useSyncStore.getState().setLastUpdatedAt(res.lastUpdatedAt);
+      }
+      useSyncStore.getState().setLastSyncedAt(res.serverTime);
+      setIdle();
+      return res;
+    } catch (e) {
+      handleError(e);
+      return null;
+    }
+  };
+
   return {
     start: () => {
       if (unsubscribe) return; // 二重 start 防止
@@ -242,5 +270,6 @@ export function createSyncOrchestrator(): Orchestrator {
       await pullOnce();
       await pushPendingNow();
     },
+    merge,
   };
 }

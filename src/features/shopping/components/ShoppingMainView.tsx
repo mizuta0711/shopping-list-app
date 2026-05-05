@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { History, RefreshCw, Settings, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
+import { SyncStatusDot } from "@/features/sync/components/SyncStatusDot";
+import {
+  SyncStatusSheet,
+  type SyncStatusSheetHandle,
+} from "@/features/sync/components/SyncStatusSheet";
+import { useSyncStatus } from "@/features/sync/hooks/useSyncStatus";
 import {
   DndContext,
   PointerSensor,
@@ -138,11 +144,31 @@ export function ShoppingMainView() {
     [visibleItems],
   );
 
+  const { status: syncStatus } = useSyncStatus();
+  const syncSheetRef = useRef<SyncStatusSheetHandle>(null);
+  const handleOpenSyncSheet = useCallback(() => {
+    if (syncStatus === "logged_out") return;
+    syncSheetRef.current?.open();
+  }, [syncStatus]);
+
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col bg-white">
       <header className="sticky top-0 z-10 flex items-center gap-1 border-b border-gray-200 bg-white px-3 py-3">
-        <ShoppingCart className="ml-1 h-5 w-5 text-gray-900" aria-hidden />
-        <h1 className="ml-1 flex-1 text-lg font-bold text-gray-900">
+        <button
+          type="button"
+          onClick={handleOpenSyncSheet}
+          aria-label={
+            syncStatus === "logged_out"
+              ? "買い物リスト"
+              : `同期状態を表示`
+          }
+          disabled={syncStatus === "logged_out"}
+          className="relative ml-1 flex h-9 w-9 items-center justify-center rounded-full text-gray-900 transition active:bg-gray-100 disabled:cursor-default disabled:active:bg-transparent"
+        >
+          <ShoppingCart className="h-5 w-5" aria-hidden />
+          <SyncStatusDot status={syncStatus} />
+        </button>
+        <h1 className="flex-1 text-lg font-bold text-gray-900">
           買い物リスト
         </h1>
         <button
@@ -219,6 +245,7 @@ export function ShoppingMainView() {
       </div>
 
       {hydrated && !hasOnboarded && <OnboardingModal />}
+      <SyncStatusSheet ref={syncSheetRef} />
     </main>
   );
 }
