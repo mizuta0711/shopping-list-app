@@ -542,5 +542,5 @@ npm install @use-gesture/react
 | 版数 | 日付 | コミット | 内容 | 担当 |
 |------|------|---------|------|------|
 | 1.0 | 2026-05-05 | 9d5832f | 初版ドラフト作成（Stage 1 機能・画面設計）。横スワイプ + ドラッグハンドル分離方式を採用、`@use-gesture/react` を選定 | Claude Code |
-| 1.1 | 2026-05-05 | (未確定) | Stage 1 レビュー指摘 5 件全採用 + Stage 2 技術設計を追記。履歴画面スコープ外 / アンドゥトースト / 80px 閾値 / setActivatorNodeRef / 44px ハンドル / Phase 10.3 注記 / UX-2/UX-3 を技術負債.md に登録 / キーボード SC 撤去 | Claude Code |
-| 1.2 | 2026-05-05 | (未確定) | 実装完了。SwipeableRow / ItemEditModal / SortableItemRow ハンドル分離 / アンドゥ削除トースト / `updateItemName` + `restoreItem` ストアアクション。code-review (高2/中3/低2 全反映) / browser-test (16 シナリオ中 15 ✅ + 1 環境制限) / build OK。全体ステータス 🟢 完了 | Claude Code |
+| 1.1 | 2026-05-05 | 0b21c3d | Stage 1 レビュー指摘 5 件全採用 + Stage 2 技術設計を追記。履歴画面スコープ外 / アンドゥトースト / 80px 閾値 / setActivatorNodeRef / 44px ハンドル / Phase 10.3 注記 / UX-2/UX-3 を技術負債.md に登録 / キーボード SC 撤去 | Claude Code |
+| 1.2 | 2026-05-05 | 0b21c3d | 実装完了。SwipeableRow / ItemEditModal / SortableItemRow ハンドル分離 / アンドゥ削除トースト / `updateItemName` + `restoreItem` ストアアクション。code-review (高2/中3/低2 全反映) / browser-test (16 シナリオ中 15 ✅ + 1 環境制限) / build OK。全体ステータス 🟢 完了 | Claude Code |
