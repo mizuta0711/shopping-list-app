@@ -57,6 +57,7 @@ export const SortableItemRow = memo<Props>(function SortableItemRow({
   const isPurchased = item.status === "PURCHASED";
 
   // PURCHASED 行 or 非編集モード: 編集系操作なし
+  // ただし編集モード中は PURCHASED 行のタップ（未購入に戻す）も無効化（誤操作防止）
   if (isPurchased || !editMode) {
     return (
       <div ref={setNodeRef} style={style}>
@@ -64,6 +65,7 @@ export const SortableItemRow = memo<Props>(function SortableItemRow({
           item={item}
           onToggle={onToggle}
           onMoveScope={onMoveScope}
+          editMode={editMode}
         />
       </div>
     );
