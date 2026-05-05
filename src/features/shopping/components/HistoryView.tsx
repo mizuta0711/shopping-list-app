@@ -50,7 +50,7 @@ export function HistoryView() {
   );
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col bg-white">
+    <main className="mx-auto flex h-[100dvh] max-w-md flex-col bg-white">
       <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-3">
         <h1 className="flex-1 text-lg font-bold text-gray-900">購入済み</h1>
       </header>

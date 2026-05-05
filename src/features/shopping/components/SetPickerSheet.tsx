@@ -111,14 +111,13 @@ export const SetPickerSheet = memo<Props>(function SetPickerSheet({
         toast(`「${set.name}」は空のセットです`);
         return;
       }
-      // 既存にないアイテムだけ初期 ON（A-1 + C-1）
-      const initial = new Set(
-        set.items.filter((name) => !existingNames.has(name)),
-      );
-      if (initial.size === 0) {
+      const selectable = set.items.filter((name) => !existingNames.has(name));
+      if (selectable.length === 0) {
         toast(`「${set.name}」のアイテムはすべて既にリストにあります`);
         return;
       }
+      // 初期はすべてチェックなし。ユーザーが必要なものだけ選ぶ
+      const initial = new Set<string>();
       checkedRef.current = initial;
       setSelectedSet(set);
       setChecked(initial);

@@ -223,7 +223,7 @@ export function ShoppingMainView() {
   }, [syncStatus]);
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col bg-white">
+    <main className="mx-auto flex h-[100dvh] max-w-md flex-col bg-white">
       <header className="sticky top-0 z-10 flex items-center gap-1 border-b border-gray-200 bg-white px-3 py-3">
         <button
           type="button"

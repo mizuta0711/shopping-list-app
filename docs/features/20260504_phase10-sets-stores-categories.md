@@ -64,6 +64,7 @@
 | 4 | Phase 10.1a | /design-review tech | ✅ 完了 | 条件付き承認、11件指摘を全反映 |
 | 5 | Phase 10.1a | セット機能の実装（LocalStorage 単独） | ✅ 完了 | 2026-05-05 完了。code-review / browser-test / build-check 通過 |
 | 5.5 | Phase 10.1c | セット選択時のチェックボックス UX（軽量 M フロー） | ✅ 完了 | 2026-05-05 完了。`SetPickerSheet` を 2 段階化、第 2 段で個別アイテムをチェック選択できるよう改修。設計書: [completed/20260505_phase10.1c-set-picker-checkbox.md](./completed/20260505_phase10.1c-set-picker-checkbox.md) |
+| 5.7 | Phase 10.1d | セット編集画面のリスト形式化＋メイン画面と統一されたレイアウト（軽量 M フロー） | ✅ 完了 | 2026-05-05 完了。`SetEditView` を textarea 入力からリスト形式 UI に書き換え。下部固定の追加入力欄、右上の保存/削除ボタンへ変更しメイン画面とレイアウトを統一。SetPickerSheet の初期チェックを「全未選択」に変更。BottomNav を全画面で固定表示（`h-[100dvh]`）。設計書: [completed/20260505_phase10.1d-set-edit-list-form.md](./completed/20260505_phase10.1d-set-edit-list-form.md) |
 | 6 | Phase 10.1b | セットのクラウド同期化（Stage 2 設計＋実装） | 🔵 未実施 | 10.1a 完了後に着手。Phase 9 の LWW + reconciler スキームを `ShoppingSet` に横展開 |
 | 7 | Phase 10.2 | 店舗別リストの実装 | ⏸ 保留 | 観察指標は `docs/設計書/技術負債と将来課題.md` FUTURE-1 を参照 |
 | 8 | Phase 10.3 | 自動分類の実装 | ⏸ 保留 | 観察指標は `docs/設計書/技術負債と将来課題.md` FUTURE-2 を参照 |
