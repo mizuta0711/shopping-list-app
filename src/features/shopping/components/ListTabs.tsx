@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import type { ShoppingList } from "../types";
@@ -18,8 +18,6 @@ type Props = {
   /** showAllTab=true の時、全リスト選択 */
   onSelectAll?: () => void;
 };
-
-const ALL_TAB_ID = "__all__";
 
 export const ListTabs = memo<Props>(function ListTabs({
   lists,

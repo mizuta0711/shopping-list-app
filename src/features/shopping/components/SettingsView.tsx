@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Download,
   ListChecks,
+  ShoppingCart,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -74,18 +75,33 @@ export function SettingsView() {
 
         <section className="mb-8">
           <h2 className="mb-3 px-1 text-xs font-medium uppercase text-gray-500">
-            セット
+            リスト・セット
           </h2>
-          <Link
-            href="/sets"
-            className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 transition active:bg-gray-50"
-          >
-            <span className="flex items-center gap-3">
-              <ListChecks className="h-5 w-5 text-gray-500" aria-hidden />
-              <span className="text-base text-gray-900">セット管理</span>
-            </span>
-            <ChevronRight className="h-5 w-5 text-gray-400" aria-hidden />
-          </Link>
+          <div className="flex flex-col gap-2">
+            <Link
+              href="/lists"
+              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 transition active:bg-gray-50"
+            >
+              <span className="flex items-center gap-3">
+                <ShoppingCart
+                  className="h-5 w-5 text-gray-500"
+                  aria-hidden
+                />
+                <span className="text-base text-gray-900">リスト管理</span>
+              </span>
+              <ChevronRight className="h-5 w-5 text-gray-400" aria-hidden />
+            </Link>
+            <Link
+              href="/sets"
+              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 transition active:bg-gray-50"
+            >
+              <span className="flex items-center gap-3">
+                <ListChecks className="h-5 w-5 text-gray-500" aria-hidden />
+                <span className="text-base text-gray-900">セット管理</span>
+              </span>
+              <ChevronRight className="h-5 w-5 text-gray-400" aria-hidden />
+            </Link>
+          </div>
         </section>
 
         <section className="mb-8">
