@@ -61,7 +61,7 @@ export const ListListView = memo(function ListListView() {
         ) : (
           <>
             <ul>
-              {lists.map((l) => {
+              {lists.filter((l) => !l.system).map((l) => {
                 const itemsCount = items.filter(
                   (i) => i.listId === l.id,
                 ).length;
