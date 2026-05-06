@@ -138,7 +138,20 @@ export const useListsStore = create<ListsState & ListsActions>()(
           const byId = new Map(state.lists.map((l) => [l.id, l]));
           for (const u of upserts) byId.set(u.id, u);
           for (const id of deletes) byId.delete(id);
-          return { lists: sortLists(Array.from(byId.values())) };
+          // 防御: system: true (未分類) は各ユーザー 1 件のみが正しい状態。
+          // サーバー pull で重複が発生した場合は updatedAt の新しい方を残す。
+          const all = Array.from(byId.values());
+          const systemLists = all.filter((l) => l.system);
+          if (systemLists.length > 1) {
+            const winner = systemLists.reduce((a, b) =>
+              new Date(a.updatedAt).getTime() >= new Date(b.updatedAt).getTime()
+                ? a
+                : b,
+            );
+            const cleaned = all.filter((l) => !l.system || l.id === winner.id);
+            return { lists: sortLists(cleaned) };
+          }
+          return { lists: sortLists(all) };
         });
       },
 

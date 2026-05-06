@@ -10,6 +10,9 @@ import {
   type ConfirmDialogHandle,
 } from "@/components/common/ConfirmDialog";
 import { useShoppingStore } from "@/features/shopping/stores/shoppingStore";
+import { useSetsStore } from "@/features/shopping/stores/setsStore";
+import { useListsStore } from "@/features/shopping/stores/listsStore";
+import { useActiveListStore } from "@/features/shopping/stores/activeListStore";
 import { useSyncStore } from "@/features/sync/stores/syncStore";
 import { useSyncOrchestrator } from "@/components/providers/SyncProvider";
 
@@ -53,6 +56,9 @@ export function AccountSection() {
       }
       if (checked) {
         useShoppingStore.getState().reset();
+        useSetsStore.getState().reset();
+        useListsStore.getState().reset();
+        useActiveListStore.getState().reset();
         // ローカルクリア時のみ syncStore も初期化（lastUpdatedAt も含めて）。
         // 保持時は signOut → useSyncOnMount が status="logged_out" にする経路に任せて
         // lastUpdatedAt を温存し、再ログイン時の差分取得起点として使う。

@@ -10,6 +10,9 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { useShoppingStore } from "../stores/shoppingStore";
+import { useSetsStore } from "../stores/setsStore";
+import { useListsStore } from "../stores/listsStore";
+import { useActiveListStore } from "../stores/activeListStore";
 import {
   exportStateToJson,
   importStateFromFile,
@@ -57,6 +60,9 @@ export function SettingsView() {
     );
     if (!confirmed) return;
     reset();
+    useSetsStore.getState().reset();
+    useListsStore.getState().reset();
+    useActiveListStore.getState().reset();
     toast.success("すべてのデータを削除しました");
   }, [reset]);
 
