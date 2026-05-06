@@ -35,6 +35,7 @@ import { SortableItemRow } from "./SortableItemRow";
 import { AddItemForm } from "./AddItemForm";
 import { ListMoveSheet } from "./ListMoveSheet";
 import { ListTabs } from "./ListTabs";
+import { ListUpgradeCoachmark } from "./ListUpgradeCoachmark";
 import { ScopeTabs } from "./ScopeTabs";
 import { SortMenu } from "./SortMenu";
 import { OnboardingModal } from "./OnboardingModal";
@@ -426,6 +427,9 @@ export function ShoppingMainView() {
       <BottomNav />
 
       {hydrated && !hasOnboarded && <OnboardingModal />}
+      {hydrated && hasOnboarded && userListsCount === 0 && (
+        <ListUpgradeCoachmark />
+      )}
       <SyncStatusSheet ref={syncSheetRef} />
 
       {editingItem && (
