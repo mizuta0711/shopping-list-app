@@ -46,6 +46,11 @@ export const SyncMergeSchema = z
 export const ShoppingSetSchema = z
   .object({
     id: z.string().uuid(),
+    /**
+     * Phase 10.4 で追加。後方互換のため optional とし、未指定時はサーバー側で
+     * 該当ユーザーの「未分類」リスト ID を補完する（dto.setToDTO は常に listId を含む）。
+     */
+    listId: z.string().uuid().optional(),
     name: z.string().min(1).max(50),
     items: z.array(z.string().min(1).max(50)).max(100),
     createdAt: z.string().datetime(),

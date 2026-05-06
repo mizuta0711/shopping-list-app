@@ -76,6 +76,11 @@ export type SyncMergeResponse = {
  * クライアント送受信に使う ShoppingSet DTO。
  * ShoppingSet には元々 userId が含まれないが、API DTO であることを明示する。
  * サーバー側 upsert 時は `userId: session.user.id` で必ず上書きする。
+ *
+ * Phase 10.4: listId を追加。
+ * - API レスポンスでは必ず string として含む（setToDTO が常に補完する）
+ * - API リクエスト（push）では旧クライアント後方互換のため Zod スキーマ側で optional を許可し、
+ *   サーバー側で未分類 ID に補完してから DB に保存する
  */
 export type ShoppingSetDTO = ShoppingSet;
 

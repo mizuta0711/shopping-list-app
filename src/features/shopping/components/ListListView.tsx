@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { memo, useEffect, useState } from "react";
-import { ArrowLeft, ChevronRight, Plus, ShoppingCart } from "lucide-react";
+import { ChevronRight, Plus, ShoppingCart } from "lucide-react";
+import { BottomNav } from "@/components/layout/BottomNav";
 import { useActiveListStore } from "../stores/activeListStore";
 import { useListsStore } from "../stores/listsStore";
 import { useShoppingStore } from "../stores/shoppingStore";
@@ -34,14 +35,7 @@ export const ListListView = memo(function ListListView() {
 
   return (
     <main className="mx-auto flex h-[100dvh] max-w-md flex-col bg-white">
-      <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-gray-200 bg-white px-2 py-3">
-        <Link
-          href="/settings"
-          aria-label="設定に戻る"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-gray-700 transition active:bg-gray-100"
-        >
-          <ArrowLeft className="h-5 w-5" aria-hidden />
-        </Link>
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
         <h1 className="flex-1 text-lg font-bold text-gray-900">リスト管理</h1>
         {overLimit ? (
           <span
@@ -137,6 +131,7 @@ export const ListListView = memo(function ListListView() {
           </>
         )}
       </div>
+      <BottomNav />
     </main>
   );
 });

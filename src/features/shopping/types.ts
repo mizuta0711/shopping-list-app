@@ -21,6 +21,8 @@ export const STORAGE_VERSION = 3;
 /// 買い物セット定義（カレーセット・調味料セット 等）
 export type ShoppingSet = {
   id: string;
+  /** 紐付けリスト ID（NOT NULL、Phase 10.4 で追加）。デフォルト = 未分類 ID */
+  listId: string;
   name: string;
   items: string[];
   createdAt: string;
@@ -28,7 +30,8 @@ export type ShoppingSet = {
 };
 
 export const SETS_STORAGE_KEY = "shopping-list-app:sets:state";
-export const SETS_STORAGE_VERSION = 1;
+export const SETS_STORAGE_VERSION = 2;
+export const SETS_BACKUP_V1_KEY = "shopping-list-app:sets:state-backup-v1";
 
 export const SET_NAME_MAX_LENGTH = 50;
 export const SET_ITEM_NAME_MAX_LENGTH = 50;

@@ -122,6 +122,11 @@ export async function PUT(req: NextRequest) {
             where: { userId, listId: id },
             data: { listId: unclassified.id, updatedAt: new Date() },
           });
+          // 1b. 当該リスト紐付けセットを未分類へ（Phase 10.4 連鎖）
+          await tx.shoppingSet.updateMany({
+            where: { userId, listId: id },
+            data: { listId: unclassified.id, updatedAt: new Date() },
+          });
           // 2. リスト本体削除
           await tx.shoppingList.delete({ where: { id } });
           // 3. tombstone 発行

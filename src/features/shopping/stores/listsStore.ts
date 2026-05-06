@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { useSyncStore } from "@/features/sync/stores/syncStore";
+import { useSetsStore } from "./setsStore";
 import {
   LISTS_STORAGE_KEY,
   LISTS_STORAGE_VERSION,
@@ -111,13 +112,19 @@ export const useListsStore = create<ListsState & ListsActions>()(
         if (touched) useSyncStore.getState().markListUpsert(id);
       },
 
-      // 注: 循環参照を避けるため shoppingStore へは直接アクセスしない。
+      // 注: 循環参照を避けるため shoppingStore / activeListStore へは直接アクセスしない。
       // 呼び出し側 (ListEditView / syncOrchestrator) で必ず以下を行うこと:
       //   useShoppingStore.applyListDeleted(id, unclassifiedId)
       //   useActiveListStore.setActiveListId(unclassifiedId) (アクティブだった場合)
+      // setsStore は循環しないため直接呼ぶ。
       deleteList: (id) => {
         const target = get().lists.find((l) => l.id === id);
         if (!target || target.system) return;
+        // セットの listId を未分類へ連鎖移動
+        const unclassifiedId = get().lists.find((l) => l.system)?.id;
+        if (unclassifiedId) {
+          useSetsStore.getState().applyListDeleted(id, unclassifiedId);
+        }
         set((state) => ({
           lists: state.lists.filter((l) => l.id !== id),
         }));

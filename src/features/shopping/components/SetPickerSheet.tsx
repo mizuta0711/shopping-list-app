@@ -17,7 +17,7 @@ import { useActiveListStore } from "../stores/activeListStore";
 import { useListsStore } from "../stores/listsStore";
 import { useSetsStore } from "../stores/setsStore";
 import { useShoppingStore } from "../stores/shoppingStore";
-import type { ItemScope, ShoppingSet } from "../types";
+import type { ItemScope, ShoppingList, ShoppingSet } from "../types";
 
 type Props = {
   activeScope: ItemScope;
@@ -47,7 +47,9 @@ export const SetPickerSheet = memo<Props>(function SetPickerSheet({
   const checkedRef = useRef<Set<string>>(checked);
 
   const sets = useSetsStore((state) => state.sets);
+  const lists = useListsStore((state) => state.lists);
   const items = useShoppingStore((state) => state.items);
+  const activeListId = useActiveListStore((state) => state.activeListId);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const backButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -181,6 +183,8 @@ export const SetPickerSheet = memo<Props>(function SetPickerSheet({
         {step === "list" ? (
           <ListStep
             sets={sets}
+            lists={lists}
+            activeListId={activeListId}
             hydrated={hydrated}
             closeButtonRef={closeButtonRef}
             onClose={handleClose}
@@ -192,6 +196,8 @@ export const SetPickerSheet = memo<Props>(function SetPickerSheet({
               set={selectedSet}
               checked={checked}
               existingNames={existingNames}
+              activeListId={activeListId}
+              lists={lists}
               backButtonRef={backButtonRef}
               onBack={handleBack}
               onClose={handleClose}
@@ -212,6 +218,8 @@ SetPickerSheet.displayName = "SetPickerSheet";
 
 type ListStepProps = {
   sets: ShoppingSet[];
+  lists: ShoppingList[];
+  activeListId: string | null;
   hydrated: boolean;
   closeButtonRef: RefObject<HTMLButtonElement | null>;
   onClose: () => void;
@@ -220,11 +228,52 @@ type ListStepProps = {
 
 const ListStep = memo<ListStepProps>(function ListStep({
   sets,
+  lists,
+  activeListId,
   hydrated,
   closeButtonRef,
   onClose,
   onPickSet,
 }) {
+  const unclassified = lists.find((l) => l.system);
+  const resolvedActiveId =
+    activeListId ?? unclassified?.id ?? null;
+
+  // アクティブリスト紐付けセット（上部）
+  const activeSets = useMemo(
+    () =>
+      resolvedActiveId
+        ? sets.filter((s) => s.listId === resolvedActiveId)
+        : [],
+    [sets, resolvedActiveId],
+  );
+
+  // その他のセット用グルーピング: ユーザー作成リスト（activeList以外）→ 共通（最下部）
+  const otherGroups = useMemo(() => {
+    const userLists = lists
+      .filter((l) => !l.system && l.id !== resolvedActiveId)
+      .slice()
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+    const result: Array<{ list: ShoppingList; label: string; sets: ShoppingSet[] }> = [];
+    for (const list of userLists) {
+      const listSets = sets.filter((s) => s.listId === list.id);
+      if (listSets.length > 0) {
+        result.push({ list, label: list.name, sets: listSets });
+      }
+    }
+    // 共通（未分類）セクション — activeList が未分類のとき上部に出ているため除外
+    if (unclassified && unclassified.id !== resolvedActiveId) {
+      const commonSets = sets.filter((s) => s.listId === unclassified.id);
+      if (commonSets.length > 0) {
+        result.push({ list: unclassified, label: "共通", sets: commonSets });
+      }
+    }
+    return result;
+  }, [sets, lists, resolvedActiveId, unclassified]);
+
+  const activeList = lists.find((l) => l.id === resolvedActiveId);
+
   return (
     <>
       <header className="flex items-center gap-2 border-b border-gray-200 px-4 py-3">
@@ -251,28 +300,61 @@ const ListStep = memo<ListStepProps>(function ListStep({
         ) : sets.length === 0 ? (
           <EmptyState onClose={onClose} />
         ) : (
-          <ul>
-            {sets.map((set) => (
-              <li key={set.id}>
-                <button
-                  type="button"
-                  onClick={() => onPickSet(set)}
-                  className="flex w-full items-center gap-3 border-b border-gray-100 px-4 py-4 text-left transition active:bg-gray-50"
-                >
-                  <ListChecks
-                    className="h-5 w-5 shrink-0 text-gray-500"
-                    aria-hidden
-                  />
-                  <span className="flex-1 truncate text-base text-gray-900">
-                    {set.name}
+          <>
+            {/* 上部: 現在のリスト用セット */}
+            {activeSets.length > 0 && activeList && (
+              <section>
+                <div className="flex items-center gap-2 border-b border-gray-100 bg-emerald-50 px-4 py-2">
+                  <span className="text-sm" aria-hidden>
+                    {activeList.system ? "🗂️" : (activeList.emoji ?? "🛒")}
                   </span>
-                  <span className="shrink-0 text-sm text-gray-500">
-                    {set.items.length}品
+                  <span className="text-xs font-medium text-emerald-700">
+                    {activeList.system ? "共通" : activeList.name}（現在のリスト）
                   </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+                </div>
+                <ul>
+                  {activeSets.map((set) => (
+                    <SetPickerRow key={set.id} set={set} onPickSet={onPickSet} />
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* 下部: その他のセット */}
+            {otherGroups.length > 0 && (
+              <section>
+                <div className="flex items-center border-b border-gray-100 bg-gray-50 px-4 py-2">
+                  <span className="text-xs font-medium text-gray-600">
+                    その他のセット
+                  </span>
+                </div>
+                {otherGroups.map(({ list, label, sets: groupSets }) => (
+                  <div key={list.id}>
+                    <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-2">
+                      <span className="text-sm" aria-hidden>
+                        {list.system ? "🗂️" : (list.emoji ?? "🛒")}
+                      </span>
+                      <span className="text-xs text-gray-500">{label}</span>
+                    </div>
+                    <ul>
+                      {groupSets.map((set) => (
+                        <SetPickerRow key={set.id} set={set} onPickSet={onPickSet} />
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </section>
+            )}
+
+            {/* すべてのセットがactiveListに紐付いており他がない場合のフォールバック */}
+            {activeSets.length === 0 && otherGroups.length === 0 && (
+              <ul>
+                {sets.map((set) => (
+                  <SetPickerRow key={set.id} set={set} onPickSet={onPickSet} />
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </div>
     </>
@@ -281,12 +363,49 @@ const ListStep = memo<ListStepProps>(function ListStep({
 
 ListStep.displayName = "ListStep";
 
+// ---------------- SetPickerRow ----------------
+
+type SetPickerRowProps = {
+  set: ShoppingSet;
+  onPickSet: (set: ShoppingSet) => void;
+};
+
+const SetPickerRow = memo<SetPickerRowProps>(function SetPickerRow({
+  set,
+  onPickSet,
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onPickSet(set)}
+        className="flex w-full items-center gap-3 border-b border-gray-100 px-4 py-4 text-left transition active:bg-gray-50"
+      >
+        <ListChecks
+          className="h-5 w-5 shrink-0 text-gray-500"
+          aria-hidden
+        />
+        <span className="flex-1 truncate text-base text-gray-900">
+          {set.name}
+        </span>
+        <span className="shrink-0 text-sm text-gray-500">
+          {set.items.length}品
+        </span>
+      </button>
+    </li>
+  );
+});
+
+SetPickerRow.displayName = "SetPickerRow";
+
 // ---------------- ItemsStep ----------------
 
 type ItemsStepProps = {
   set: ShoppingSet;
   checked: Set<string>;
   existingNames: Set<string>;
+  activeListId: string | null;
+  lists: ShoppingList[];
   backButtonRef: RefObject<HTMLButtonElement | null>;
   onBack: () => void;
   onClose: () => void;
@@ -298,6 +417,8 @@ const ItemsStep = memo<ItemsStepProps>(function ItemsStep({
   set,
   checked,
   existingNames,
+  activeListId,
+  lists,
   backButtonRef,
   onBack,
   onClose,
@@ -306,6 +427,13 @@ const ItemsStep = memo<ItemsStepProps>(function ItemsStep({
 }) {
   const checkedCount = checked.size;
   const canConfirm = checkedCount > 0;
+
+  const unclassified = lists.find((l) => l.system);
+  const resolvedActiveId = activeListId ?? unclassified?.id ?? null;
+  const activeList = lists.find((l) => l.id === resolvedActiveId);
+  const activeListLabel = activeList
+    ? `${activeList.emoji ?? (activeList.system ? "🗂️" : "🛒")}${activeList.name}`
+    : null;
 
   return (
     <>
@@ -319,12 +447,19 @@ const ItemsStep = memo<ItemsStepProps>(function ItemsStep({
         >
           <ArrowLeft className="h-5 w-5" aria-hidden />
         </button>
-        <h2
-          id="set-picker-items-title"
-          className="flex-1 truncate text-base font-bold text-gray-900"
-        >
-          {set.name}
-        </h2>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <h2
+            id="set-picker-items-title"
+            className="truncate text-base font-bold text-gray-900"
+          >
+            {set.name}
+          </h2>
+          {activeListLabel && (
+            <p className="truncate text-xs text-emerald-700">
+              → {activeListLabel}に追加
+            </p>
+          )}
+        </div>
         <button
           type="button"
           onClick={onClose}

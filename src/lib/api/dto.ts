@@ -27,6 +27,7 @@ export function toDTO(item: PrismaShoppingItem): ShoppingItemDTO {
 export function setToDTO(set: PrismaShoppingSet): ShoppingSetDTO {
   return {
     id: set.id,
+    listId: set.listId,
     name: set.name,
     items: set.items,
     createdAt: set.createdAt.toISOString(),

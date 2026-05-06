@@ -44,6 +44,7 @@ const itemToDTO = (item: ShoppingItem): ShoppingItemDTO => ({
 
 const setToDTO = (s: ShoppingSet): ShoppingSetDTO => ({
   id: s.id,
+  listId: s.listId,
   name: s.name,
   items: s.items,
   createdAt: s.createdAt,

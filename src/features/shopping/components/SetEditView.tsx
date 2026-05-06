@@ -12,14 +12,16 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
-import { ArrowLeft, Check, ListChecks, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, ListChecks, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useSetsStore } from "../stores/setsStore";
+import { useListsStore } from "../stores/listsStore";
 import { parseItemNames } from "../utils/parseItemNames";
 import {
   SET_ITEMS_MAX_COUNT,
   SET_NAME_MAX_LENGTH,
 } from "../types";
+import { SetListPickerSheet } from "./SetListPickerSheet";
 
 type Props =
   | { mode: "new"; setId?: undefined }
@@ -34,8 +36,11 @@ export const SetEditView = memo<Props>(function SetEditView({ mode, setId }) {
   const addSet = useSetsStore((state) => state.addSet);
   const updateSet = useSetsStore((state) => state.updateSet);
   const deleteSet = useSetsStore((state) => state.deleteSet);
+  const lists = useListsStore((state) => state.lists);
 
   const [name, setName] = useState("");
+  const [listId, setListId] = useState<string>("");
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [items, setItems] = useState<string[]>([]);
   const [addInput, setAddInput] = useState("");
   const [initialized, setInitialized] = useState(mode === "new");
@@ -55,12 +60,20 @@ export const SetEditView = memo<Props>(function SetEditView({ mode, setId }) {
     [mode, sets, setId],
   );
 
+  // 新規作成モード: hydrate 後に未分類 ID をデフォルト listId として設定
+  useEffect(() => {
+    if (mode !== "new" || listId) return;
+    const defaultListId = useListsStore.getState().ensureUnclassified();
+    setListId(defaultListId);
+  }, [mode, listId]);
+
   // 編集モード: hydrate 後に対象セットからフォームを初期化（一度だけ）
   useEffect(() => {
     if (mode !== "edit" || !hydrated || initialized) return;
     if (target) {
       setName(target.name);
       setItems(target.items);
+      setListId(target.listId);
     }
     setInitialized(true);
   }, [mode, hydrated, initialized, target]);
@@ -120,16 +133,18 @@ export const SetEditView = memo<Props>(function SetEditView({ mode, setId }) {
     (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       if (!canSave) return;
+      const resolvedListId =
+        listId || useListsStore.getState().ensureUnclassified();
       if (mode === "new") {
-        addSet(trimmedName, items);
+        addSet(trimmedName, items, resolvedListId);
         toast.success("セットを作成しました");
       } else {
-        updateSet(setId, trimmedName, items);
+        updateSet(setId, { name: trimmedName, items, listId: resolvedListId });
         toast.success("セットを更新しました");
       }
       router.replace("/sets");
     },
-    [canSave, mode, trimmedName, items, addSet, updateSet, setId, router],
+    [canSave, mode, trimmedName, items, listId, addSet, updateSet, setId, router],
   );
 
   const handleDelete = useCallback(() => {
@@ -211,6 +226,34 @@ export const SetEditView = memo<Props>(function SetEditView({ mode, setId }) {
             </label>
           </div>
 
+          {/* 紐付けるリスト */}
+          <div className="mt-6 px-4">
+            <span className="mb-2 block text-sm font-medium text-gray-700">
+              紐付けるリスト
+            </span>
+            {(() => {
+              const selectedList = lists.find((l) => l.id === listId);
+              return (
+                <button
+                  type="button"
+                  onClick={() => setIsPickerOpen(true)}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-gray-300 bg-gray-50 px-4 py-3 text-left transition active:bg-gray-100"
+                >
+                  <span className="text-xl" aria-hidden>
+                    {selectedList?.emoji ?? "🗂️"}
+                  </span>
+                  <span className="flex-1 truncate text-base text-gray-900">
+                    {selectedList?.name ?? "未分類"}
+                  </span>
+                  <ChevronDown
+                    className="h-4 w-4 shrink-0 text-gray-500"
+                    aria-hidden
+                  />
+                </button>
+              );
+            })()}
+          </div>
+
           {/* 商品ヘッダ + 件数 */}
           <div className="mt-6 flex items-baseline justify-between px-4 pb-2">
             <h2 className="text-sm font-medium text-gray-700">商品</h2>
@@ -283,6 +326,12 @@ export const SetEditView = memo<Props>(function SetEditView({ mode, setId }) {
           </button>
         </div>
       </form>
+      <SetListPickerSheet
+        isOpen={isPickerOpen}
+        onClose={() => setIsPickerOpen(false)}
+        onSelect={setListId}
+        selectedId={listId}
+      />
     </main>
   );
 });

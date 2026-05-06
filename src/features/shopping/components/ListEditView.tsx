@@ -14,6 +14,7 @@ import { ArrowLeft, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useActiveListStore } from "../stores/activeListStore";
 import { useListsStore } from "../stores/listsStore";
+import { useSetsStore } from "../stores/setsStore";
 import { useShoppingStore } from "../stores/shoppingStore";
 import {
   LIST_EMOJI_PRESETS,
@@ -111,10 +112,21 @@ export const ListEditView = memo<Props>(function ListEditView({
   const handleDelete = useCallback(() => {
     if (mode !== "edit" || !target || target.system) return;
     const itemsCount = items.filter((i) => i.listId === listId).length;
-    const message =
-      itemsCount > 0
-        ? `「${target.name}」を削除します。所属する ${itemsCount} 件のアイテムは未分類リストに移動されます。よろしいですか？`
-        : `「${target.name}」を削除します。よろしいですか？`;
+    const setsCount = useSetsStore
+      .getState()
+      .sets.filter((s) => s.listId === listId).length;
+
+    let message: string;
+    if (itemsCount > 0 && setsCount > 0) {
+      message = `「${target.name}」を削除します。所属する ${itemsCount} 件のアイテム + ${setsCount} 件のセットは未分類リストに移動されます。よろしいですか？`;
+    } else if (itemsCount > 0) {
+      message = `「${target.name}」を削除します。所属する ${itemsCount} 件のアイテムは未分類リストに移動されます。よろしいですか？`;
+    } else if (setsCount > 0) {
+      message = `「${target.name}」を削除します。所属する ${setsCount} 件のセットは未分類リストに移動されます。よろしいですか？`;
+    } else {
+      message = `「${target.name}」を削除します。よろしいですか？`;
+    }
+
     const confirmed = window.confirm(message);
     if (!confirmed) return;
     const unclassifiedId = ensureUnclassified();
@@ -122,13 +134,21 @@ export const ListEditView = memo<Props>(function ListEditView({
     applyListDeleted(listId, unclassifiedId);
     // 2. アクティブが削除対象なら未分類へ
     if (activeListId === listId) setActiveListId(unclassifiedId);
-    // 3. リスト本体削除
+    // 3. リスト本体削除（listsStore.deleteList 内でセット連鎖も走る）
     deleteList(listId);
-    toast.success(
-      itemsCount > 0
-        ? `「${target.name}」を削除しました。${itemsCount} 件を未分類に移動しました`
-        : `「${target.name}」を削除しました`,
-    );
+
+    let toastMessage: string;
+    if (itemsCount > 0 && setsCount > 0) {
+      toastMessage = `「${target.name}」を削除しました。${itemsCount} 件のアイテム + ${setsCount} 件のセットを未分類に移動しました`;
+    } else if (itemsCount > 0) {
+      toastMessage = `「${target.name}」を削除しました。${itemsCount} 件のアイテムを未分類に移動しました`;
+    } else if (setsCount > 0) {
+      toastMessage = `「${target.name}」を削除しました。${setsCount} 件のセットを未分類に移動しました`;
+    } else {
+      toastMessage = `「${target.name}」を削除しました`;
+    }
+
+    toast.success(toastMessage);
     router.replace("/lists");
   }, [
     mode,

@@ -101,9 +101,31 @@ export async function PUT(req: NextRequest) {
     const { upserts, deletedIds, since } = parsed.data;
     const sinceDate = since ? new Date(since) : null;
 
+    // 未分類リスト ID を取得（listId 未指定/不正セットの補完用）
+    const unclassifiedList = await prisma.shoppingList.findFirst({
+      where: { userId, system: true },
+      select: { id: true },
+    });
+    if (!unclassifiedList) {
+      return badRequest(
+        "未分類リストが見つかりません。先に POST /api/sync/lists/merge を実行してください",
+      );
+    }
+    const unclassifiedId = unclassifiedList.id;
+
     const result = await prisma.$transaction(async (tx) => {
       const applied: ShoppingSetDTO[] = [];
       const rejected: SetsSyncPushResponse["rejected"] = [];
+
+      // ユーザーが所有するリスト ID のホワイトリストを構築（不正 listId の防御）
+      const userListIds = new Set(
+        (
+          await tx.shoppingList.findMany({
+            where: { userId },
+            select: { id: true },
+          })
+        ).map((l) => l.id),
+      );
 
       for (const input of upserts) {
         const existing = await tx.shoppingSet.findUnique({
@@ -121,9 +143,14 @@ export async function PUT(req: NextRequest) {
           continue;
         }
 
+        const resolvedListId =
+          input.listId && userListIds.has(input.listId)
+            ? input.listId
+            : (existing?.listId ?? unclassifiedId);
         const data = {
           name: input.name,
           items: input.items,
+          listId: resolvedListId,
           createdAt: new Date(input.createdAt),
           updatedAt: new Date(input.updatedAt),
           userId,

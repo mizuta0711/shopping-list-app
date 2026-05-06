@@ -68,13 +68,23 @@ export function reconcileSets(params: {
   for (const s of serverChanges) {
     const l = map.get(s.id);
     if (!l || l.updatedAt < s.updatedAt) {
-      map.set(s.id, s);
+      // サーバーから受信したデータは常に listId を持つことをアサート
+      // listId が未定義の場合はローカルの既存値か空文字で補完（旧クライアント互換）
+      const withListId: ShoppingSet = {
+        ...s,
+        listId: s.listId ?? l?.listId ?? "",
+      };
+      map.set(s.id, withListId);
     }
   }
 
   let overwrittenCount = 0;
   for (const r of rejected) {
-    map.set(r.id, r.serverSet);
+    const withListId: ShoppingSet = {
+      ...r.serverSet,
+      listId: r.serverSet.listId ?? map.get(r.id)?.listId ?? "",
+    };
+    map.set(r.id, withListId);
     overwrittenCount++;
   }
 

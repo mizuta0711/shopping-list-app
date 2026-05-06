@@ -22,6 +22,18 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) return badRequest("不正なリクエスト");
     const { localSets } = parsed.data;
 
+    // 未分類リスト ID を取得（listId 未指定セットの補完用）
+    const unclassifiedList = await prisma.shoppingList.findFirst({
+      where: { userId, system: true },
+      select: { id: true },
+    });
+    if (!unclassifiedList) {
+      return badRequest(
+        "未分類リストが見つかりません。先に POST /api/sync/lists/merge を実行してください",
+      );
+    }
+    const unclassifiedId = unclassifiedList.id;
+
     // tx 開始前のスナップショット（uploadedCount 計算専用）
     const preTxExisting = await prisma.shoppingSet.findMany({
       where: { userId },
@@ -42,6 +54,16 @@ export async function POST(req: NextRequest) {
         txExisting.map((e) => [e.id, e.updatedAt.getTime()] as const),
       );
 
+      // ユーザーが所有するリスト ID のホワイトリストを構築（不正 listId の防御）
+      const userListIds = new Set(
+        (
+          await tx.shoppingList.findMany({
+            where: { userId },
+            select: { id: true },
+          })
+        ).map((l) => l.id),
+      );
+
       for (const input of localSets) {
         const existingUpdatedAtMs = txExistingMap.get(input.id);
         const inputUpdatedAtMs = new Date(input.updatedAt).getTime();
@@ -51,9 +73,14 @@ export async function POST(req: NextRequest) {
         ) {
           continue;
         }
+        const resolvedListId =
+          input.listId && userListIds.has(input.listId)
+            ? input.listId
+            : unclassifiedId;
         const data = {
           name: input.name,
           items: input.items,
+          listId: resolvedListId,
           createdAt: new Date(input.createdAt),
           updatedAt: new Date(input.updatedAt),
           userId,

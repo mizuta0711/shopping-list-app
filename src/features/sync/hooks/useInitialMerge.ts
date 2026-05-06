@@ -35,6 +35,7 @@ const itemToDTO = (item: ShoppingItem): ShoppingItemDTO => ({
 
 const setToDTO = (s: ShoppingSet): ShoppingSetDTO => ({
   id: s.id,
+  listId: s.listId,
   name: s.name,
   items: s.items,
   createdAt: s.createdAt,
@@ -101,6 +102,14 @@ export function useInitialMerge() {
             listsRes.remappedUnclassifiedIds,
             listsRes.unclassifiedId,
           );
+        // Phase 10.4: sets の listId も同様にリマップ（C3 対応）
+        const remappedRecord = Object.fromEntries(
+          listsRes.remappedUnclassifiedIds.map((fromId) => [
+            fromId,
+            listsRes.unclassifiedId,
+          ]),
+        );
+        useSetsStore.getState().remapListIds(remappedRecord);
       }
 
       // 3. items / sets を並列マージ（remap 済みの listId で）

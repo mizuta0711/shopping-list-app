@@ -115,14 +115,17 @@ model DeletionTombstone {
 model ShoppingSet {
   id        String   @id /// クライアント発行 UUID v4
   userId    String /// 所有ユーザー
+  listId    String /// 紐付けるリスト ID（Phase 10.4 追加。デフォルト = 未分類リスト）
   name      String /// セット名（最大 50 文字、サーバー側でも slice）
   items     String[] /// アイテム名の配列（PostgreSQL TEXT[]、最大 100 件）
   createdAt DateTime /// クライアント発行のタイムスタンプ
   updatedAt DateTime /// LWW 判定キー（クライアント発行）
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  list ShoppingList @relation(fields: [listId], references: [id], onDelete: Restrict)
 
   @@index([userId, updatedAt])
+  @@index([userId, listId])
 }
 
 /// セット削除イベントのトラッキング（since 以降の削除を別端末に伝播するため）
@@ -154,6 +157,7 @@ model ShoppingList {
 
   user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   items ShoppingItem[]
+  sets  ShoppingSet[]
 
   @@index([userId, updatedAt])
   @@index([userId, system])

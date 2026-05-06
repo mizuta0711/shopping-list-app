@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FolderInput, Pencil, RefreshCw, ShoppingCart } from "lucide-react";
+import { FolderInput, Home, Pencil, RefreshCw, ShoppingCart } from "lucide-react";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { toast } from "sonner";
 import {
@@ -300,7 +300,7 @@ export function ShoppingMainView() {
           disabled={syncStatus === "logged_out"}
           className="relative ml-1 flex h-9 w-9 items-center justify-center rounded-full text-gray-900 transition active:bg-gray-100 disabled:cursor-default disabled:active:bg-transparent"
         >
-          <ShoppingCart className="h-5 w-5" aria-hidden />
+          <Home className="h-5 w-5" aria-hidden />
           <SyncStatusDot status={syncStatus} />
         </button>
         <h1 className="flex-1 text-lg font-bold text-gray-900">

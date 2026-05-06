@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { memo } from "react";
-import { Clock, Home, ListChecks, Settings } from "lucide-react";
+import { Clock, Home, ListChecks, Settings, ShoppingCart } from "lucide-react";
 
 type Tab = {
   href: string;
@@ -19,6 +19,12 @@ const TABS: Tab[] = [
     label: "履歴",
     icon: Clock,
     isActive: (p) => p === "/history",
+  },
+  {
+    href: "/lists",
+    label: "リスト",
+    icon: ShoppingCart,
+    isActive: (p) => p === "/lists" || p.startsWith("/lists/"),
   },
   {
     href: "/sets",
