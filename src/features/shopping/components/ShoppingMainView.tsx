@@ -312,6 +312,7 @@ export function ShoppingMainView() {
               <button
                 type="button"
                 onClick={handleExitMoveMode}
+                aria-label="移動モードをキャンセル"
                 className="rounded-full px-3 py-1.5 text-sm font-medium text-gray-700 transition active:bg-gray-100"
               >
                 キャンセル
@@ -320,6 +321,7 @@ export function ShoppingMainView() {
               <button
                 type="button"
                 onClick={() => setMoveSheetOpen(true)}
+                aria-label={`${moveMode.selectedItemIds.length} 件の移動先を選択`}
                 className="rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition active:bg-emerald-700"
               >
                 決定 ({moveMode.selectedItemIds.length})
@@ -383,7 +385,7 @@ export function ShoppingMainView() {
         onChange={setActiveScope}
       />
 
-      <div className="flex-1 overflow-y-auto">
+      <div id="main-list-panel" role="tabpanel" className="flex-1 overflow-y-auto">
         {!hydrated ? (
           <SkeletonList />
         ) : visibleItems.length === 0 ? (

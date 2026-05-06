@@ -40,6 +40,9 @@ Auth.js v5 の `handlers` を `src/lib/auth.ts` から re-export。Google OAuth 
 | GET | `/api/sync/sets` | セット全件 / 差分取得 | 必須 | Phase 10.1b |
 | PUT | `/api/sync/sets` | セット楽観的更新 (push + LWW + 他端末差分取得) | 必須 | Phase 10.1b |
 | POST | `/api/sync/sets/merge` | 初回ログイン時のセットローカル全件マージ | 必須 | Phase 10.1b |
+| GET | `/api/sync/lists` | リスト全件 / 差分取得 | 必須 | Phase 10.2 |
+| PUT | `/api/sync/lists` | リスト楽観的更新 (push + LWW + 他端末差分取得 + system 保護 + 削除時アイテム未分類化) | 必須 | Phase 10.2 |
+| POST | `/api/sync/lists/merge` | 初回ログイン時のリストローカル全件マージ + 未分類重複の remap | 必須 | Phase 10.2 |
 
 ### `GET /api/sync/items`
 
@@ -356,3 +359,4 @@ z.object({
 |------|------|---------|------|------|
 | 1.0 | 2026-05-04 | (未確定) | 初版作成。Phase 9 のクラウド同期 API 3 エンドポイント (GET/PUT /api/sync/items, POST /api/sync/merge) と Auth.js v5 統合エンドポイントを記載 | Claude Code |
 | 1.1 | 2026-05-05 | (未確定) | Phase 10.1b でセット同期 API 3 本 (GET/PUT /api/sync/sets, POST /api/sync/sets/merge) を追加。Zod スキーマ・リクエスト/レスポンス例を記載 | Claude Code |
+| 1.2 | 2026-05-06 | (未確定) | Phase 10.2 でリスト同期 API 3 本 (GET/PUT /api/sync/lists, POST /api/sync/lists/merge) を追加。`/api/sync/items` / `merge` は `listId` を受け付け、未指定 / 不正 listId はサーバー側で未分類補完 (`ensureUnclassifiedList`)。リスト削除時はサーバー側 tx で所属アイテムの listId を未分類へ書き換えてから本体削除 + tombstone 発行 | Claude Code |

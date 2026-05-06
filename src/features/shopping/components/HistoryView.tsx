@@ -81,9 +81,10 @@ export function HistoryView() {
         showAllTab
         isAllActive={historyActiveListId === ALL_LISTS_TAB}
         onSelectAll={() => setHistoryActiveListId(ALL_LISTS_TAB)}
+        panelId="history-list-panel"
       />
 
-      <div className="flex-1 overflow-y-auto">
+      <div id="history-list-panel" role="tabpanel" className="flex-1 overflow-y-auto">
         {!hydrated ? null : groups.length === 0 ? (
           <EmptyState />
         ) : (

@@ -17,6 +17,8 @@ type Props = {
   isAllActive?: boolean;
   /** showAllTab=true の時、全リスト選択 */
   onSelectAll?: () => void;
+  /** aria-controls の対象パネル id（デフォルト: "main-list-panel"） */
+  panelId?: string;
 };
 
 export const ListTabs = memo<Props>(function ListTabs({
@@ -27,6 +29,7 @@ export const ListTabs = memo<Props>(function ListTabs({
   showAllTab = false,
   isAllActive = false,
   onSelectAll,
+  panelId = "main-list-panel",
 }) {
   const router = useRouter();
   // ユーザー作成リストが 0 件で showAllTab でもないとき非表示 (PA-2)
@@ -45,6 +48,7 @@ export const ListTabs = memo<Props>(function ListTabs({
           emoji="📋"
           active={isAllActive}
           disabled={disabled}
+          panelId={panelId}
           onClick={onSelectAll ?? (() => {})}
         />
       )}
@@ -55,6 +59,7 @@ export const ListTabs = memo<Props>(function ListTabs({
           emoji={l.emoji}
           active={!isAllActive && activeListId === l.id}
           disabled={disabled}
+          panelId={panelId}
           onClick={() => onSelect(l.id)}
         />
       ))}
@@ -80,6 +85,7 @@ type ListTabButtonProps = {
   emoji: string | null;
   active: boolean;
   disabled?: boolean;
+  panelId: string;
   onClick: () => void;
 };
 
@@ -88,6 +94,7 @@ const ListTabButton = memo<ListTabButtonProps>(function ListTabButton({
   emoji,
   active,
   disabled,
+  panelId,
   onClick,
 }) {
   return (
@@ -95,7 +102,7 @@ const ListTabButton = memo<ListTabButtonProps>(function ListTabButton({
       type="button"
       role="tab"
       aria-selected={active}
-      aria-controls="main-list-panel"
+      aria-controls={panelId}
       disabled={disabled}
       onClick={onClick}
       className={`flex h-7 max-w-36 shrink-0 items-center gap-1 rounded-full px-3 text-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${

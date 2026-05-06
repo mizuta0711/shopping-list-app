@@ -111,6 +111,10 @@ export const useListsStore = create<ListsState & ListsActions>()(
         if (touched) useSyncStore.getState().markListUpsert(id);
       },
 
+      // 注: 循環参照を避けるため shoppingStore へは直接アクセスしない。
+      // 呼び出し側 (ListEditView / syncOrchestrator) で必ず以下を行うこと:
+      //   useShoppingStore.applyListDeleted(id, unclassifiedId)
+      //   useActiveListStore.setActiveListId(unclassifiedId) (アクティブだった場合)
       deleteList: (id) => {
         const target = get().lists.find((l) => l.id === id);
         if (!target || target.system) return;

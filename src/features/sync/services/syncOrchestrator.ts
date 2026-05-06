@@ -456,6 +456,15 @@ export function createSyncOrchestrator(): Orchestrator {
         deletes: res.serverDeletes,
       });
       prevListsSnapshot = useListsStore.getState().lists;
+      // server で削除されたリスト所属アイテムの listId を未分類へ連鎖更新
+      // (server 側で既に未分類化済みだが、次の items pull まで listId が古いため、
+      //  クライアント側でも先回りして整合性を保つ)
+      if (res.serverDeletes.length > 0) {
+        const unclassifiedId = useListsStore.getState().ensureUnclassified();
+        for (const id of res.serverDeletes) {
+          useShoppingStore.getState().applyListDeleted(id, unclassifiedId);
+        }
+      }
       ensureActiveListIsValid();
       if (res.lastUpdatedAt) {
         useSyncStore.getState().setLastListsUpdatedAt(res.lastUpdatedAt);
