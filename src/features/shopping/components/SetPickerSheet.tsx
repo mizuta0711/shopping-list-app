@@ -13,6 +13,8 @@ import { createPortal } from "react-dom";
 import { ArrowLeft, Check, ListChecks, X } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useActiveListStore } from "../stores/activeListStore";
+import { useListsStore } from "../stores/listsStore";
 import { useSetsStore } from "../stores/setsStore";
 import { useShoppingStore } from "../stores/shoppingStore";
 import type { ItemScope, ShoppingSet } from "../types";
@@ -146,7 +148,10 @@ export const SetPickerSheet = memo<Props>(function SetPickerSheet({
     const names = selectedSet.items.filter((n) => checkedRef.current.has(n));
     if (names.length === 0) return;
     const before = useShoppingStore.getState().items.length;
-    useShoppingStore.getState().addItems(names, activeScope);
+    const listId =
+      useActiveListStore.getState().activeListId ??
+      useListsStore.getState().ensureUnclassified();
+    useShoppingStore.getState().addItems(names, listId, activeScope);
     const added = useShoppingStore.getState().items.length - before;
     if (added === 0) {
       // existingNames との同期ラグ等で 0 件になった場合のフォールバック

@@ -10,6 +10,7 @@ import {
   SyncPushSchema,
 } from "@/lib/api/sync-schemas";
 import { toDTO } from "@/lib/api/dto";
+import { ensureUnclassifiedList } from "@/lib/services/listSyncService";
 import type {
   ApiSuccess,
   ShoppingItemDTO,
@@ -105,6 +106,17 @@ export async function PUT(req: NextRequest) {
       const applied: ShoppingItemDTO[] = [];
       const rejected: SyncPushResponse["rejected"] = [];
 
+      // listId 補完: 未指定または不正な listId は未分類で受け入れる
+      const unclassified = await ensureUnclassifiedList(tx, userId);
+      const userListIds = new Set(
+        (
+          await tx.shoppingList.findMany({
+            where: { userId },
+            select: { id: true },
+          })
+        ).map((l) => l.id),
+      );
+
       for (const input of upserts) {
         const existing = await tx.shoppingItem.findUnique({
           where: { id: input.id },
@@ -123,7 +135,12 @@ export async function PUT(req: NextRequest) {
           continue;
         }
 
+        const listId =
+          input.listId && userListIds.has(input.listId)
+            ? input.listId
+            : unclassified.id;
         const data = {
+          listId,
           name: input.name,
           scope: input.scope,
           status: input.status,

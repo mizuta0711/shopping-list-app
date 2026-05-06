@@ -20,6 +20,7 @@ const FOCUS_PULL_THROTTLE_MS = 60_000;
 
 const itemToDTO = (item: ShoppingItem): ShoppingItemDTO => ({
   id: item.id,
+  listId: item.listId,
   name: item.name,
   scope: item.scope,
   status: item.status,

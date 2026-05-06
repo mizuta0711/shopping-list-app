@@ -1,4 +1,8 @@
-import type { ShoppingItem, ShoppingSet } from "@/features/shopping/types";
+import type {
+  ShoppingItem,
+  ShoppingList,
+  ShoppingSet,
+} from "@/features/shopping/types";
 
 /**
  * クライアント送受信に使う ShoppingItem DTO。
@@ -112,6 +116,62 @@ export type SetsSyncMergeRequest = {
 /** POST /api/sync/sets/merge のレスポンス data */
 export type SetsSyncMergeResponse = {
   finalSets: ShoppingSetDTO[];
+  uploadedCount: number;
+  downloadedCount: number;
+  serverTime: string;
+  lastUpdatedAt: string | null;
+};
+
+// =============================================================
+// Phase 10.2: ShoppingList 同期用の型
+// =============================================================
+
+/** ShoppingList の API DTO（クライアント型と同一形状） */
+export type ShoppingListDTO = ShoppingList;
+
+/** GET /api/sync/lists のレスポンス data */
+export type ListsSyncPullResponse = {
+  lists: ShoppingListDTO[];
+  serverDeletes: string[];
+  serverTime: string;
+  lastUpdatedAt: string | null;
+};
+
+/** PUT /api/sync/lists のリクエスト */
+export type ListsSyncPushRequest = {
+  upserts: ShoppingListDTO[];
+  deletedIds: string[];
+  since: string | null;
+};
+
+/** PUT /api/sync/lists のレスポンス data */
+export type ListsSyncPushResponse = {
+  applied: ShoppingListDTO[];
+  rejected: Array<{
+    id: string;
+    reason: "SERVER_NEWER" | "SYSTEM_PROTECTED";
+    serverList?: ShoppingListDTO;
+  }>;
+  serverChanges: ShoppingListDTO[];
+  serverDeletes: string[];
+  serverTime: string;
+  lastUpdatedAt: string | null;
+};
+
+/** POST /api/sync/lists/merge のリクエスト */
+export type ListsSyncMergeRequest = {
+  localLists: ShoppingListDTO[];
+  /** 「未分類」(`system: true`) リストのローカル ID */
+  localUnclassifiedId: string | null;
+};
+
+/** POST /api/sync/lists/merge のレスポンス data */
+export type ListsSyncMergeResponse = {
+  finalLists: ShoppingListDTO[];
+  /** サーバー側で正本となる未分類 ID（古い方を採用） */
+  unclassifiedId: string;
+  /** クライアント側で別 ID として作られていた未分類 ID（クライアントは items の listId をリマップする） */
+  remappedUnclassifiedIds: string[];
   uploadedCount: number;
   downloadedCount: number;
   serverTime: string;

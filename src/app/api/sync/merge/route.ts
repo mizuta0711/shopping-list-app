@@ -8,6 +8,7 @@ import {
 import { SyncMergeSchema } from "@/lib/api/sync-schemas";
 import { toDTO } from "@/lib/api/dto";
 import type { ApiSuccess, SyncMergeResponse } from "@/types/sync";
+import { ensureUnclassifiedList } from "@/lib/services/listSyncService";
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,6 +31,17 @@ export async function POST(req: NextRequest) {
     const preTxExistingIds = new Set(preTxExisting.map((e) => e.id));
 
     const finalItems = await prisma.$transaction(async (tx) => {
+      // listId 補完: 未指定または不正な listId は未分類で受け入れる
+      const unclassified = await ensureUnclassifiedList(tx, userId);
+      const userListIds = new Set(
+        (
+          await tx.shoppingList.findMany({
+            where: { userId },
+            select: { id: true },
+          })
+        ).map((l) => l.id),
+      );
+
       // tx 内で改めて取得して LWW 判定の正確性を確保
       const inputIds = localItems.map((l) => l.id);
       const txExisting =
@@ -52,7 +64,12 @@ export async function POST(req: NextRequest) {
         ) {
           continue;
         }
+        const listId =
+          input.listId && userListIds.has(input.listId)
+            ? input.listId
+            : unclassified.id;
         const data = {
+          listId,
           name: input.name,
           scope: input.scope,
           status: input.status,

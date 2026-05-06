@@ -14,6 +14,7 @@ const HAS_MERGED_KEY = (userId: string) => `sync:hasMerged:${userId}`;
 
 const itemToDTO = (item: ShoppingItem): ShoppingItemDTO => ({
   id: item.id,
+  listId: item.listId,
   name: item.name,
   scope: item.scope,
   status: item.status,

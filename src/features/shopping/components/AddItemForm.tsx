@@ -12,6 +12,8 @@ import {
 import { ListChecks, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useShoppingStore } from "../stores/shoppingStore";
+import { useActiveListStore } from "../stores/activeListStore";
+import { useListsStore } from "../stores/listsStore";
 import type { ItemScope } from "../types";
 import { SetPickerSheet } from "./SetPickerSheet";
 
@@ -28,6 +30,8 @@ export const AddItemForm = memo<Props>(function AddItemForm({ scope }) {
   const formRef = useRef<HTMLFormElement>(null);
   const openSheetButtonRef = useRef<HTMLButtonElement>(null);
   const addItems = useShoppingStore((state) => state.addItems);
+  const activeListId = useActiveListStore((state) => state.activeListId);
+  const ensureUnclassified = useListsStore((state) => state.ensureUnclassified);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -44,7 +48,8 @@ export const AddItemForm = memo<Props>(function AddItemForm({ scope }) {
       const names = value.split(/[\n、。]/);
       const trimmedNames = names.map((n) => n.trim()).filter((n) => n.length > 0);
       const before = useShoppingStore.getState().items.length;
-      addItems(names, scope);
+      const listId = activeListId ?? ensureUnclassified();
+      addItems(names, listId, scope);
       const added = useShoppingStore.getState().items.length - before;
       const skipped = trimmedNames.length - added;
 
@@ -60,7 +65,7 @@ export const AddItemForm = memo<Props>(function AddItemForm({ scope }) {
 
       setValue("");
     },
-    [addItems, value, scope],
+    [addItems, activeListId, ensureUnclassified, value, scope],
   );
 
   const handleKeyDown = useCallback(
