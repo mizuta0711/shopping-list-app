@@ -26,11 +26,14 @@ import {
   arrayMove,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { useActiveListStore } from "../stores/activeListStore";
+import { useListsStore } from "../stores/listsStore";
 import { useShoppingStore } from "../stores/shoppingStore";
 import { filterPendingByScope, sortItems } from "../stores/selectors";
 import type { ItemScope, ShoppingItem } from "../types";
 import { SortableItemRow } from "./SortableItemRow";
 import { AddItemForm } from "./AddItemForm";
+import { ListTabs } from "./ListTabs";
 import { ScopeTabs } from "./ScopeTabs";
 import { SortMenu } from "./SortMenu";
 import { OnboardingModal } from "./OnboardingModal";
@@ -59,6 +62,25 @@ export function ShoppingMainView() {
   const items = useShoppingStore((state) => state.items);
   const sort = useShoppingStore((state) => state.sort);
   const hasOnboarded = useShoppingStore((state) => state.hasOnboarded);
+  const lists = useListsStore((state) => state.lists);
+  const ensureUnclassified = useListsStore((state) => state.ensureUnclassified);
+  const activeListId = useActiveListStore((state) => state.activeListId);
+  const setActiveListId = useActiveListStore((state) => state.setActiveListId);
+
+  // hydrated 後、activeListId が無効なら未分類にフォールバック
+  useEffect(() => {
+    if (!hydrated) return;
+    const validIds = new Set(lists.map((l) => l.id));
+    if (!activeListId || !validIds.has(activeListId)) {
+      const unclassifiedId = ensureUnclassified();
+      setActiveListId(unclassifiedId);
+    }
+  }, [hydrated, activeListId, lists, ensureUnclassified, setActiveListId]);
+
+  // 編集モードはリスト切替時に OFF にリセット
+  useEffect(() => {
+    setEditMode(false);
+  }, [activeListId]);
   const togglePurchased = useShoppingStore((state) => state.togglePurchased);
   const moveScope = useShoppingStore((state) => state.moveScope);
   const setSort = useShoppingStore((state) => state.setSort);
@@ -72,35 +94,41 @@ export function ShoppingMainView() {
     }),
   );
 
+  // アクティブリストの items のみに絞る
+  const itemsInList = useMemo(
+    () => (activeListId ? items.filter((i) => i.listId === activeListId) : []),
+    [items, activeListId],
+  );
+
   const todayCount = useMemo(
-    () => filterPendingByScope(items, "TODAY").length,
-    [items],
+    () => filterPendingByScope(itemsInList, "TODAY").length,
+    [itemsInList],
   );
   const laterCount = useMemo(
-    () => filterPendingByScope(items, "LATER").length,
-    [items],
+    () => filterPendingByScope(itemsInList, "LATER").length,
+    [itemsInList],
   );
 
   const visibleItems = useMemo<ShoppingItem[]>(() => {
     // 元の位置を維持するため、PENDING と「保持中の PURCHASED」を1つの配列でまとめてからソート
-    const filtered = items.filter(
+    const filtered = itemsInList.filter(
       (i) =>
         i.scope === activeScope &&
         (i.status === "PENDING" ||
           (i.status === "PURCHASED" && keptPurchasedIds.includes(i.id))),
     );
     return sortItems(filtered, sort);
-  }, [items, activeScope, sort, keptPurchasedIds]);
+  }, [itemsInList, activeScope, sort, keptPurchasedIds]);
 
   const keptCountThisScope = useMemo(
     () =>
-      items.filter(
+      itemsInList.filter(
         (i) =>
           i.scope === activeScope &&
           i.status === "PURCHASED" &&
           keptPurchasedIds.includes(i.id),
       ).length,
-    [items, activeScope, keptPurchasedIds],
+    [itemsInList, activeScope, keptPurchasedIds],
   );
 
   const handleToggle = useCallback(
@@ -257,6 +285,12 @@ export function ShoppingMainView() {
           <Pencil className="h-5 w-5" aria-hidden />
         </button>
       </header>
+
+      <ListTabs
+        lists={lists}
+        activeListId={activeListId}
+        onSelect={setActiveListId}
+      />
 
       <ScopeTabs
         active={activeScope}
