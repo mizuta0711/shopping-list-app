@@ -21,20 +21,22 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  shoppingItems ShoppingItem[]
-  tombstones    DeletionTombstone[]
-  shoppingSets  ShoppingSet[]
-  setTombstones SetDeletionTombstone[]
+  accounts       Account[]
+  sessions       Session[]
+  shoppingItems  ShoppingItem[]
+  tombstones     DeletionTombstone[]
+  shoppingSets   ShoppingSet[]
+  setTombstones  SetDeletionTombstone[]
+  shoppingLists  ShoppingList[]
+  listTombstones ShoppingListDeletionTombstone[]
 }
 
 /// OAuth プロバイダのアカウント情報（Auth.js 標準）
 model Account {
   id                String  @id @default(uuid())
   userId            String
-  type              String  /// "oauth" など
-  provider          String  /// "google"
+  type              String /// "oauth" など
+  provider          String /// "google"
   providerAccountId String
   refresh_token     String?
   access_token      String?
@@ -76,27 +78,30 @@ model VerificationToken {
 /// updatedAt は `@updatedAt` を使わずクライアント発行値を保存（LWW 判定の主キー）
 model ShoppingItem {
   id          String    @id /// クライアント発行 UUID v4
-  userId      String    /// 所有ユーザー
-  name        String    /// アイテム名
-  scope       String    /// "TODAY" | "LATER"
-  status      String    /// "PENDING" | "PURCHASED"
-  order       Int       /// 同一 scope 内の表示順
-  createdAt   DateTime  /// クライアント発行のタイムスタンプ
-  updatedAt   DateTime  /// LWW 判定キー（クライアント発行）
+  userId      String /// 所有ユーザー
+  listId      String /// 所属リスト ID（Phase 10.2 で追加。NOT NULL、未分類リスト ID で初期化）
+  name        String /// アイテム名
+  scope       String /// "TODAY" | "LATER"
+  status      String /// "PENDING" | "PURCHASED"
+  order       Int /// 同一 scope 内の表示順
+  createdAt   DateTime /// クライアント発行のタイムスタンプ
+  updatedAt   DateTime /// LWW 判定キー（クライアント発行）
   purchasedAt DateTime? /// PURCHASED に遷移した時刻
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  list ShoppingList @relation(fields: [listId], references: [id], onDelete: Restrict)
 
   @@index([userId, updatedAt])
   @@index([userId, scope, status])
+  @@index([userId, listId, scope, status])
 }
 
 /// 削除イベントのトラッキング（since 以降の削除を別端末に伝播するため）
 /// hard delete 時に upsert で行を追加・更新する。一定期間（例: 30日）経過後にバッチで掃除する想定（Phase 9.1）
 model DeletionTombstone {
   id        String   @id @default(uuid())
-  userId    String   /// 削除を行ったユーザー
-  itemId    String   /// 削除された ShoppingItem の id
+  userId    String /// 削除を行ったユーザー
+  itemId    String /// 削除された ShoppingItem の id
   deletedAt DateTime @default(now()) /// サーバー時刻
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -109,8 +114,8 @@ model DeletionTombstone {
 /// id はクライアント発行 UUID、updatedAt は LWW 判定キー（クライアント発行値を保存）
 model ShoppingSet {
   id        String   @id /// クライアント発行 UUID v4
-  userId    String   /// 所有ユーザー
-  name      String   /// セット名（最大 50 文字、サーバー側でも slice）
+  userId    String /// 所有ユーザー
+  name      String /// セット名（最大 50 文字、サーバー側でも slice）
   items     String[] /// アイテム名の配列（PostgreSQL TEXT[]、最大 100 件）
   createdAt DateTime /// クライアント発行のタイムスタンプ
   updatedAt DateTime /// LWW 判定キー（クライアント発行）
@@ -124,12 +129,46 @@ model ShoppingSet {
 /// Phase 10.1b で追加。一定期間経過後のバッチ掃除は DeletionTombstone と合わせて Phase 9.1 で対応
 model SetDeletionTombstone {
   id        String   @id @default(uuid())
-  userId    String   /// 削除を行ったユーザー
-  setId     String   /// 削除された ShoppingSet の id
+  userId    String /// 削除を行ったユーザー
+  setId     String /// 削除された ShoppingSet の id
   deletedAt DateTime @default(now()) /// サーバー時刻
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, setId])
+  @@index([userId, deletedAt])
+}
+
+/// 買い物リスト（Phase 10.2 で追加。複数リスト機能の実体）
+/// id はクライアント発行 UUID。updatedAt は LWW 判定キー（クライアント発行値を保存）
+/// system: true は「未分類」固定リスト。クライアント・API 双方で削除・改名を弾く
+/// 各ユーザーごとに system: true は 1 件のみ（migration.sql で partial unique index を追加）
+model ShoppingList {
+  id        String   @id /// クライアント発行 UUID v4
+  userId    String /// 所有ユーザー
+  name      String /// リスト名（最大 20 文字、未分類は固定文言）
+  emoji     String? /// 絵文字（任意、未分類は 🗂️ 固定）
+  system    Boolean  @default(false) /// true = 未分類（システム管理）
+  createdAt DateTime /// クライアント発行のタイムスタンプ
+  updatedAt DateTime /// LWW 判定キー（クライアント発行）
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items ShoppingItem[]
+
+  @@index([userId, updatedAt])
+  @@index([userId, system])
+}
+
+/// リスト削除イベントのトラッキング（Phase 10.2）
+/// アイテム所属の listId は削除前にサーバー側で未分類へ書き換えて保持する
+model ShoppingListDeletionTombstone {
+  id        String   @id @default(uuid())
+  userId    String /// 削除を行ったユーザー
+  listId    String /// 削除された ShoppingList の id
+  deletedAt DateTime @default(now()) /// サーバー時刻
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listId])
   @@index([userId, deletedAt])
 }

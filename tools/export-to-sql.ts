@@ -51,10 +51,12 @@ const ORDERED_TABLES: string[] = [
   "verificationToken",
   "account",
   "session",
+  "shoppingList",
   "shoppingItem",
   "deletionTombstone",
   "shoppingSet",
   "setDeletionTombstone",
+  "shoppingListDeletionTombstone",
 ];
 
 /**
@@ -66,10 +68,12 @@ const DB_TABLE_MAP: Record<string, string> = {
   account: 'public."Account"',
   session: 'public."Session"',
   verificationToken: 'public."VerificationToken"',
+  shoppingList: 'public."ShoppingList"',
   shoppingItem: 'public."ShoppingItem"',
   deletionTombstone: 'public."DeletionTombstone"',
   shoppingSet: 'public."ShoppingSet"',
   setDeletionTombstone: 'public."SetDeletionTombstone"',
+  shoppingListDeletionTombstone: 'public."ShoppingListDeletionTombstone"',
 };
 
 // ========================================
