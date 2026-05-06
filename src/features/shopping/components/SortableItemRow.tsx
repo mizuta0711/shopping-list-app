@@ -17,6 +17,10 @@ type Props = {
   onEditRequest: (item: ShoppingItem) => void;
   /** 「削除」アクション要求 */
   onDeleteRequest: (item: ShoppingItem) => void;
+  /** Phase 10.2: 移動モード */
+  moveMode?: boolean;
+  moveSelected?: boolean;
+  onMoveToggle?: (id: string) => void;
 };
 
 export const SortableItemRow = memo<Props>(function SortableItemRow({
@@ -26,6 +30,9 @@ export const SortableItemRow = memo<Props>(function SortableItemRow({
   editMode,
   onEditRequest,
   onDeleteRequest,
+  moveMode = false,
+  moveSelected = false,
+  onMoveToggle,
 }) {
   const {
     attributes,
@@ -37,7 +44,7 @@ export const SortableItemRow = memo<Props>(function SortableItemRow({
     isDragging,
   } = useSortable({
     id: item.id,
-    disabled: item.status === "PURCHASED" || !editMode,
+    disabled: item.status === "PURCHASED" || !editMode || moveMode,
   });
 
   const style: CSSProperties = {
@@ -55,6 +62,22 @@ export const SortableItemRow = memo<Props>(function SortableItemRow({
   const handleDelete = useCallback(() => onDeleteRequest(item), [onDeleteRequest, item]);
 
   const isPurchased = item.status === "PURCHASED";
+
+  // 移動モード: チェックボックス行に置き換え（編集モードと完全排他）
+  if (moveMode) {
+    return (
+      <div ref={setNodeRef} style={style}>
+        <ShoppingItemRow
+          item={item}
+          onToggle={onToggle}
+          onMoveScope={onMoveScope}
+          moveMode
+          moveSelected={moveSelected}
+          onMoveToggle={onMoveToggle}
+        />
+      </div>
+    );
+  }
 
   // PURCHASED 行 or 非編集モード: 編集系操作なし
   // ただし編集モード中は PURCHASED 行のタップ（未購入に戻す）も無効化（誤操作防止）

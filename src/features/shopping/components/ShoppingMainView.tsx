@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pencil, RefreshCw, ShoppingCart } from "lucide-react";
+import { FolderInput, Pencil, RefreshCw, ShoppingCart } from "lucide-react";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { toast } from "sonner";
 import {
@@ -33,6 +33,7 @@ import { filterPendingByScope, sortItems } from "../stores/selectors";
 import type { ItemScope, ShoppingItem } from "../types";
 import { SortableItemRow } from "./SortableItemRow";
 import { AddItemForm } from "./AddItemForm";
+import { ListMoveSheet } from "./ListMoveSheet";
 import { ListTabs } from "./ListTabs";
 import { ScopeTabs } from "./ScopeTabs";
 import { SortMenu } from "./SortMenu";
@@ -62,10 +63,23 @@ export function ShoppingMainView() {
   const items = useShoppingStore((state) => state.items);
   const sort = useShoppingStore((state) => state.sort);
   const hasOnboarded = useShoppingStore((state) => state.hasOnboarded);
+  const relocateItems = useShoppingStore((state) => state.relocateItems);
   const lists = useListsStore((state) => state.lists);
   const ensureUnclassified = useListsStore((state) => state.ensureUnclassified);
   const activeListId = useActiveListStore((state) => state.activeListId);
   const setActiveListId = useActiveListStore((state) => state.setActiveListId);
+  const moveMode = useActiveListStore((state) => state.moveMode);
+  const enterMoveMode = useActiveListStore((state) => state.enterMoveMode);
+  const exitMoveMode = useActiveListStore((state) => state.exitMoveMode);
+  const toggleMoveSelection = useActiveListStore(
+    (state) => state.toggleMoveSelection,
+  );
+  const userListsCount = useMemo(
+    () => lists.filter((l) => !l.system).length,
+    [lists],
+  );
+
+  const [moveSheetOpen, setMoveSheetOpen] = useState(false);
 
   // hydrated 後、activeListId が無効なら未分類にフォールバック
   useEffect(() => {
@@ -81,6 +95,39 @@ export function ShoppingMainView() {
   useEffect(() => {
     setEditMode(false);
   }, [activeListId]);
+
+  // 編集モード ON 時は移動モードを抜ける（排他保証）
+  useEffect(() => {
+    if (editMode && moveMode.enabled) exitMoveMode();
+  }, [editMode, moveMode.enabled, exitMoveMode]);
+
+  const handleEnterMoveMode = useCallback(() => {
+    if (editMode) setEditMode(false);
+    enterMoveMode();
+  }, [editMode, enterMoveMode]);
+
+  const handleExitMoveMode = useCallback(() => {
+    setMoveSheetOpen(false);
+    exitMoveMode();
+  }, [exitMoveMode]);
+
+  const handleConfirmMove = useCallback(
+    (targetListId: string) => {
+      const ids = moveMode.selectedItemIds;
+      if (ids.length === 0) {
+        setMoveSheetOpen(false);
+        return;
+      }
+      relocateItems(ids, targetListId);
+      const target = lists.find((l) => l.id === targetListId);
+      toast.success(
+        `${ids.length} 件を「${target?.name ?? "リスト"}」へ移動しました`,
+      );
+      setMoveSheetOpen(false);
+      exitMoveMode();
+    },
+    [moveMode.selectedItemIds, relocateItems, lists, exitMoveMode],
+  );
   const togglePurchased = useShoppingStore((state) => state.togglePurchased);
   const moveScope = useShoppingStore((state) => state.moveScope);
   const setSort = useShoppingStore((state) => state.setSort);
@@ -258,38 +305,74 @@ export function ShoppingMainView() {
         <h1 className="flex-1 text-lg font-bold text-gray-900">
           買い物リスト
         </h1>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={keptCountThisScope === 0}
-          aria-label="購入済みアイテムをリストから消す"
-          className="relative flex h-9 w-9 items-center justify-center rounded-full text-gray-700 transition active:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
-        >
-          <RefreshCw className="h-5 w-5" aria-hidden />
-          {keptCountThisScope > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold text-white">
-              {keptCountThisScope}
-            </span>
-          )}
-        </button>
-        <SortMenu active={sort} onChange={setSort} />
-        <button
-          type="button"
-          onClick={handleToggleEditMode}
-          aria-label={editMode ? "編集モードを終了" : "編集モードを開始"}
-          aria-pressed={editMode}
-          className={`flex h-9 w-9 items-center justify-center rounded-full transition active:bg-gray-100 ${
-            editMode ? "bg-gray-900 text-white active:bg-gray-700" : "text-gray-700"
-          }`}
-        >
-          <Pencil className="h-5 w-5" aria-hidden />
-        </button>
+        {moveMode.enabled ? (
+          <>
+            {moveMode.selectedItemIds.length === 0 ? (
+              <button
+                type="button"
+                onClick={handleExitMoveMode}
+                className="rounded-full px-3 py-1.5 text-sm font-medium text-gray-700 transition active:bg-gray-100"
+              >
+                キャンセル
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMoveSheetOpen(true)}
+                className="rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition active:bg-emerald-700"
+              >
+                決定 ({moveMode.selectedItemIds.length})
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={keptCountThisScope === 0}
+              aria-label="購入済みアイテムをリストから消す"
+              className="relative flex h-9 w-9 items-center justify-center rounded-full text-gray-700 transition active:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
+            >
+              <RefreshCw className="h-5 w-5" aria-hidden />
+              {keptCountThisScope > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold text-white">
+                  {keptCountThisScope}
+                </span>
+              )}
+            </button>
+            <SortMenu active={sort} onChange={setSort} />
+            <button
+              type="button"
+              onClick={handleEnterMoveMode}
+              aria-label="リスト間移動モード"
+              disabled={editMode || userListsCount === 0}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-gray-700 transition active:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
+            >
+              <FolderInput className="h-5 w-5" aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleEditMode}
+              aria-label={editMode ? "編集モードを終了" : "編集モードを開始"}
+              aria-pressed={editMode}
+              className={`flex h-9 w-9 items-center justify-center rounded-full transition active:bg-gray-100 ${
+                editMode
+                  ? "bg-gray-900 text-white active:bg-gray-700"
+                  : "text-gray-700"
+              }`}
+            >
+              <Pencil className="h-5 w-5" aria-hidden />
+            </button>
+          </>
+        )}
       </header>
 
       <ListTabs
         lists={lists}
         activeListId={activeListId}
         onSelect={setActiveListId}
+        disabled={moveMode.enabled}
       />
 
       <ScopeTabs
@@ -324,6 +407,9 @@ export function ShoppingMainView() {
                       editMode={editMode}
                       onEditRequest={handleEditRequest}
                       onDeleteRequest={handleDeleteRequest}
+                      moveMode={moveMode.enabled}
+                      moveSelected={moveMode.selectedItemIds.includes(item.id)}
+                      onMoveToggle={toggleMoveSelection}
                     />
                   </li>
                 ))}
@@ -349,6 +435,14 @@ export function ShoppingMainView() {
           onClose={handleEditClose}
         />
       )}
+
+      <ListMoveSheet
+        open={moveSheetOpen}
+        selectedCount={moveMode.selectedItemIds.length}
+        lists={lists.filter((l) => l.id !== activeListId)}
+        onClose={() => setMoveSheetOpen(false)}
+        onSelect={handleConfirmMove}
+      />
     </main>
   );
 }

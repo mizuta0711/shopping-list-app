@@ -10,6 +10,12 @@ type Props = {
   onMoveScope: (id: string, targetScope: ItemScope) => void;
   /** 編集モード中はスコープ移動ボタンを隠し、trailing（編集/削除/ハンドル）に置き換える */
   editMode?: boolean;
+  /** Phase 10.2: 移動モード中は行を選択チェックボックスに置き換える */
+  moveMode?: boolean;
+  /** 移動モード中の選択状態 */
+  moveSelected?: boolean;
+  /** 移動モード中の選択トグル */
+  onMoveToggle?: (id: string) => void;
   /** 行末に追加表示する要素（編集モード時の操作ボタン群、ドラッグハンドル等） */
   trailing?: ReactNode;
 };
@@ -19,6 +25,9 @@ export const ShoppingItemRow = memo<Props>(function ShoppingItemRow({
   onToggle,
   onMoveScope,
   editMode = false,
+  moveMode = false,
+  moveSelected = false,
+  onMoveToggle,
   trailing,
 }) {
   const isPurchased = item.status === "PURCHASED";
@@ -70,6 +79,43 @@ export const ShoppingItemRow = memo<Props>(function ShoppingItemRow({
       {item.name}
     </span>
   );
+
+  // 移動モード: 行全体タップで選択トグル + checkmark を checkbox に置き換え
+  if (moveMode) {
+    return (
+      <button
+        type="button"
+        onClick={() => onMoveToggle?.(item.id)}
+        aria-pressed={moveSelected}
+        aria-label={`${item.name} を選択`}
+        className={`group flex w-full items-stretch border-b border-gray-100 ${
+          moveSelected ? "bg-emerald-50" : ""
+        } active:bg-gray-50`}
+      >
+        {moveSelected && (
+          <span
+            className="w-1 shrink-0 bg-emerald-500"
+            aria-hidden
+          />
+        )}
+        <span className="flex flex-1 items-center gap-3 px-4 py-3 text-left">
+          <span
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition ${
+              moveSelected
+                ? "border-emerald-500 bg-emerald-500"
+                : "border-gray-300 bg-white"
+            }`}
+            aria-hidden
+          >
+            {moveSelected && (
+              <Check className="h-4 w-4 text-white" strokeWidth={3} aria-hidden />
+            )}
+          </span>
+          {nameLabel}
+        </span>
+      </button>
+    );
+  }
 
   return (
     <div className="flex w-full items-stretch border-b border-gray-100">
