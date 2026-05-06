@@ -324,7 +324,7 @@ export function ShoppingMainView() {
                 aria-label={`${moveMode.selectedItemIds.length} 件の移動先を選択`}
                 className="rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition active:bg-emerald-700"
               >
-                決定 ({moveMode.selectedItemIds.length})
+                移動 ({moveMode.selectedItemIds.length})
               </button>
             )}
           </>
