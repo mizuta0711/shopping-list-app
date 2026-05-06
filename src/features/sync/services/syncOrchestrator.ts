@@ -2,15 +2,27 @@
 
 import { signOut } from "next-auth/react";
 import { toast } from "sonner";
+import { useActiveListStore } from "@/features/shopping/stores/activeListStore";
+import { useListsStore } from "@/features/shopping/stores/listsStore";
 import { useShoppingStore } from "@/features/shopping/stores/shoppingStore";
 import { useSetsStore } from "@/features/shopping/stores/setsStore";
-import type { ShoppingItem, ShoppingSet } from "@/features/shopping/types";
+import type {
+  ShoppingItem,
+  ShoppingList,
+  ShoppingSet,
+} from "@/features/shopping/types";
 import { useSyncStore } from "@/features/sync/stores/syncStore";
-import { reconcile, reconcileSets } from "@/features/sync/services/reconcile";
+import {
+  reconcile,
+  reconcileLists,
+  reconcileSets,
+} from "@/features/sync/services/reconcile";
 import { HttpError, syncClient } from "@/features/sync/services/syncClient";
 import type {
+  ListsSyncMergeResponse,
   SetsSyncMergeResponse,
   ShoppingItemDTO,
+  ShoppingListDTO,
   ShoppingSetDTO,
   SyncMergeResponse,
 } from "@/types/sync";
@@ -38,6 +50,15 @@ const setToDTO = (s: ShoppingSet): ShoppingSetDTO => ({
   updatedAt: s.updatedAt,
 });
 
+const listToDTOClient = (l: ShoppingList): ShoppingListDTO => ({
+  id: l.id,
+  name: l.name,
+  emoji: l.emoji,
+  system: l.system,
+  createdAt: l.createdAt,
+  updatedAt: l.updatedAt,
+});
+
 type Orchestrator = {
   start: () => void;
   stop: () => void;
@@ -51,6 +72,13 @@ type Orchestrator = {
   mergeSets: (
     localSets: ShoppingSetDTO[],
   ) => Promise<SetsSyncMergeResponse | null>;
+  // Phase 10.2: lists 同期
+  pullListsOnce: () => Promise<void>;
+  pushPendingListsNow: () => Promise<void>;
+  mergeLists: (
+    localLists: ShoppingListDTO[],
+    localUnclassifiedId: string | null,
+  ) => Promise<ListsSyncMergeResponse | null>;
 };
 
 const noop: Orchestrator = {
@@ -63,6 +91,9 @@ const noop: Orchestrator = {
   pullSetsOnce: async () => {},
   pushPendingSetsNow: async () => {},
   mergeSets: async () => null,
+  pullListsOnce: async () => {},
+  pushPendingListsNow: async () => {},
+  mergeLists: async () => null,
 };
 
 export function createSyncOrchestrator(): Orchestrator {
@@ -70,12 +101,16 @@ export function createSyncOrchestrator(): Orchestrator {
 
   let prevSnapshot: ShoppingItem[] = useShoppingStore.getState().items;
   let prevSetsSnapshot: ShoppingSet[] = useSetsStore.getState().sets;
+  let prevListsSnapshot: ShoppingList[] = useListsStore.getState().lists;
   let unsubscribe: (() => void) | null = null;
   let unsubscribeSets: (() => void) | null = null;
+  let unsubscribeLists: (() => void) | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let setsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let listsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let abortController: AbortController | null = null;
   let setsAbortController: AbortController | null = null;
+  let listsAbortController: AbortController | null = null;
   let lastFocusPullAt = 0;
 
   const updateClockSkew = (serverTime: string) => {
@@ -226,6 +261,8 @@ export function createSyncOrchestrator(): Orchestrator {
 
   const onOnline = () => {
     void (async () => {
+      await pullListsOnce();
+      await pushPendingListsNow();
       await pullOnce();
       await pushPendingNow();
       await pullSetsOnce();
@@ -242,6 +279,7 @@ export function createSyncOrchestrator(): Orchestrator {
     if (now - lastFocusPullAt < FOCUS_PULL_THROTTLE_MS) return;
     lastFocusPullAt = now;
     void (async () => {
+      await pullListsOnce();
       await pullOnce();
       await pullSetsOnce();
     })();
@@ -390,6 +428,165 @@ export function createSyncOrchestrator(): Orchestrator {
     }
   };
 
+  // ---------- Phase 10.2: lists ----------
+
+  const ensureActiveListIsValid = () => {
+    const lists = useListsStore.getState().lists;
+    const validIds = new Set(lists.map((l) => l.id));
+    const activeId = useActiveListStore.getState().activeListId;
+    if (activeId && !validIds.has(activeId)) {
+      const unclassifiedId = useListsStore.getState().ensureUnclassified();
+      useActiveListStore.getState().setActiveListId(unclassifiedId);
+    }
+  };
+
+  const pullListsOnce = async (): Promise<void> => {
+    listsAbortController?.abort();
+    listsAbortController = new AbortController();
+    setSyncing();
+    try {
+      const since = useSyncStore.getState().lastListsUpdatedAt;
+      const res = await syncClient.pullLists(
+        { since },
+        listsAbortController.signal,
+      );
+      updateClockSkew(res.serverTime);
+      useListsStore.getState().applyServerChanges({
+        upserts: res.lists,
+        deletes: res.serverDeletes,
+      });
+      prevListsSnapshot = useListsStore.getState().lists;
+      ensureActiveListIsValid();
+      if (res.lastUpdatedAt) {
+        useSyncStore.getState().setLastListsUpdatedAt(res.lastUpdatedAt);
+      }
+      useSyncStore.getState().setLastSyncedAt(res.serverTime);
+      setIdle();
+    } catch (e) {
+      handleError(e);
+    }
+  };
+
+  const pushPendingListsNow = async (): Promise<void> => {
+    const { upsertIds, deleteIds } = useSyncStore
+      .getState()
+      .consumeListPending();
+    if (upsertIds.length === 0 && deleteIds.length === 0) return;
+
+    listsAbortController?.abort();
+    listsAbortController = new AbortController();
+    setSyncing();
+
+    try {
+      const lists = useListsStore.getState().lists;
+      const listsById = new Map(lists.map((l) => [l.id, l]));
+      const upserts = upsertIds
+        .map((id) => listsById.get(id))
+        .filter((l): l is ShoppingList => l !== undefined && !l.system)
+        .map(listToDTOClient);
+
+      const since = useSyncStore.getState().lastListsUpdatedAt;
+      const res = await syncClient.pushLists(
+        { upserts, deletedIds: deleteIds, since },
+        listsAbortController.signal,
+      );
+      updateClockSkew(res.serverTime);
+
+      const local = useListsStore.getState().lists;
+      const { next, overwrittenCount } = reconcileLists({
+        local,
+        serverChanges: res.serverChanges,
+        serverDeletes: res.serverDeletes,
+        rejected: res.rejected,
+      });
+      useListsStore.getState().setLists(next);
+      prevListsSnapshot = next;
+      ensureActiveListIsValid();
+
+      if (res.lastUpdatedAt) {
+        useSyncStore.getState().setLastListsUpdatedAt(res.lastUpdatedAt);
+      }
+      useSyncStore.getState().setLastSyncedAt(res.serverTime);
+
+      if (overwrittenCount > 0) {
+        setTimeout(() => {
+          toast.message(
+            `別端末の更新で${overwrittenCount}件のリストが最新版に置き換わりました`,
+          );
+        }, 200);
+      }
+
+      setIdle();
+    } catch (e) {
+      handleError(e);
+    }
+  };
+
+  const scheduleListsDebouncedPush = () => {
+    if (listsDebounceTimer) clearTimeout(listsDebounceTimer);
+    listsDebounceTimer = setTimeout(() => {
+      void pushPendingListsNow();
+    }, DEBOUNCE_MS);
+  };
+
+  const onListsStoreChange = (
+    state: ReturnType<typeof useListsStore.getState>,
+  ) => {
+    const next = state.lists;
+    const prev = prevListsSnapshot;
+    if (next === prev) return;
+    const prevById = new Map(prev.map((l) => [l.id, l]));
+    const nextById = new Map(next.map((l) => [l.id, l]));
+
+    let changed = false;
+    for (const l of next) {
+      if (l.system) continue; // system list は同期しない
+      const before = prevById.get(l.id);
+      if (!before || before.updatedAt !== l.updatedAt) {
+        useSyncStore.getState().markListUpsert(l.id);
+        changed = true;
+      }
+    }
+    for (const l of prev) {
+      if (l.system) continue;
+      if (!nextById.has(l.id)) {
+        useSyncStore.getState().markListDelete(l.id);
+        changed = true;
+      }
+    }
+
+    prevListsSnapshot = next;
+    if (changed) scheduleListsDebouncedPush();
+  };
+
+  const mergeLists = async (
+    localLists: ShoppingListDTO[],
+    localUnclassifiedId: string | null,
+  ): Promise<ListsSyncMergeResponse | null> => {
+    listsAbortController?.abort();
+    listsAbortController = new AbortController();
+    setSyncing();
+    try {
+      const res = await syncClient.mergeListsOnLogin(
+        { localLists, localUnclassifiedId },
+        listsAbortController.signal,
+      );
+      updateClockSkew(res.serverTime);
+      useListsStore.getState().setLists(res.finalLists);
+      prevListsSnapshot = useListsStore.getState().lists;
+      ensureActiveListIsValid();
+      if (res.lastUpdatedAt) {
+        useSyncStore.getState().setLastListsUpdatedAt(res.lastUpdatedAt);
+      }
+      useSyncStore.getState().setLastSyncedAt(res.serverTime);
+      setIdle();
+      return res;
+    } catch (e) {
+      handleError(e);
+      return null;
+    }
+  };
+
   const merge = async (
     localItems: ShoppingItemDTO[],
   ): Promise<SyncMergeResponse | null> => {
@@ -421,8 +618,10 @@ export function createSyncOrchestrator(): Orchestrator {
       if (unsubscribe) return; // 二重 start 防止
       prevSnapshot = useShoppingStore.getState().items;
       prevSetsSnapshot = useSetsStore.getState().sets;
+      prevListsSnapshot = useListsStore.getState().lists;
       unsubscribe = useShoppingStore.subscribe(onStoreChange);
       unsubscribeSets = useSetsStore.subscribe(onSetsStoreChange);
+      unsubscribeLists = useListsStore.subscribe(onListsStoreChange);
       window.addEventListener("online", onOnline);
       window.addEventListener("offline", onOffline);
       window.addEventListener("focus", onFocus);
@@ -436,14 +635,20 @@ export function createSyncOrchestrator(): Orchestrator {
       unsubscribe = null;
       unsubscribeSets?.();
       unsubscribeSets = null;
+      unsubscribeLists?.();
+      unsubscribeLists = null;
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = null;
       if (setsDebounceTimer) clearTimeout(setsDebounceTimer);
       setsDebounceTimer = null;
+      if (listsDebounceTimer) clearTimeout(listsDebounceTimer);
+      listsDebounceTimer = null;
       abortController?.abort();
       abortController = null;
       setsAbortController?.abort();
       setsAbortController = null;
+      listsAbortController?.abort();
+      listsAbortController = null;
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
       window.removeEventListener("focus", onFocus);
@@ -451,6 +656,8 @@ export function createSyncOrchestrator(): Orchestrator {
     pullOnce,
     pushPendingNow,
     retry: async () => {
+      await pullListsOnce();
+      await pushPendingListsNow();
       await pullOnce();
       await pushPendingNow();
       await pullSetsOnce();
@@ -460,5 +667,8 @@ export function createSyncOrchestrator(): Orchestrator {
     pullSetsOnce,
     pushPendingSetsNow,
     mergeSets,
+    pullListsOnce,
+    pushPendingListsNow,
+    mergeLists,
   };
 }

@@ -1,5 +1,10 @@
 import type {
   ApiResponse,
+  ListsSyncMergeRequest,
+  ListsSyncMergeResponse,
+  ListsSyncPullResponse,
+  ListsSyncPushRequest,
+  ListsSyncPushResponse,
   SetsSyncMergeRequest,
   SetsSyncMergeResponse,
   SetsSyncPullResponse,
@@ -148,6 +153,52 @@ export const syncClient = {
   ): Promise<SetsSyncMergeResponse> {
     return fetchWithRetry<SetsSyncMergeResponse>(
       "/api/sync/sets/merge",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+      signal,
+    );
+  },
+
+  // ---------- Phase 10.2: ShoppingList 同期 ----------
+
+  async pullLists(
+    args: { since: string | null },
+    signal?: AbortSignal,
+  ): Promise<ListsSyncPullResponse> {
+    const url = args.since
+      ? `/api/sync/lists?since=${encodeURIComponent(args.since)}`
+      : `/api/sync/lists`;
+    return fetchWithRetry<ListsSyncPullResponse>(
+      url,
+      { method: "GET" },
+      signal,
+    );
+  },
+
+  async pushLists(
+    body: ListsSyncPushRequest,
+    signal?: AbortSignal,
+  ): Promise<ListsSyncPushResponse> {
+    return fetchWithRetry<ListsSyncPushResponse>(
+      "/api/sync/lists",
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+      signal,
+    );
+  },
+
+  async mergeListsOnLogin(
+    body: ListsSyncMergeRequest,
+    signal?: AbortSignal,
+  ): Promise<ListsSyncMergeResponse> {
+    return fetchWithRetry<ListsSyncMergeResponse>(
+      "/api/sync/lists/merge",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

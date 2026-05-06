@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { useSyncStore } from "@/features/sync/stores/syncStore";
 import {
   LISTS_STORAGE_KEY,
   LISTS_STORAGE_VERSION,
@@ -85,14 +86,17 @@ export const useListsStore = create<ListsState & ListsActions>()(
         }
         const list = buildList(trimmed, emoji, false);
         set((state) => ({ lists: sortLists([...state.lists, list]) }));
+        useSyncStore.getState().markListUpsert(list.id);
         return list.id;
       },
 
       updateList: (id, patch) => {
         const now = new Date().toISOString();
+        let touched = false;
         set((state) => ({
           lists: state.lists.map((l) => {
             if (l.id !== id || l.system) return l;
+            touched = true;
             return {
               ...l,
               name:
@@ -104,6 +108,7 @@ export const useListsStore = create<ListsState & ListsActions>()(
             };
           }),
         }));
+        if (touched) useSyncStore.getState().markListUpsert(id);
       },
 
       deleteList: (id) => {
@@ -112,6 +117,7 @@ export const useListsStore = create<ListsState & ListsActions>()(
         set((state) => ({
           lists: state.lists.filter((l) => l.id !== id),
         }));
+        useSyncStore.getState().markListDelete(id);
       },
 
       setLists: (lists) => set({ lists: sortLists(lists) }),

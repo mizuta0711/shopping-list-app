@@ -1,7 +1,13 @@
-import type { ShoppingItem, ShoppingSet } from "@/features/shopping/types";
 import type {
+  ShoppingItem,
+  ShoppingList,
+  ShoppingSet,
+} from "@/features/shopping/types";
+import type {
+  ListsSyncPushResponse,
   SetsSyncPushResponse,
   ShoppingItemDTO,
+  ShoppingListDTO,
   ShoppingSetDTO,
   SyncPushResponse,
 } from "@/types/sync";
@@ -70,6 +76,40 @@ export function reconcileSets(params: {
   for (const r of rejected) {
     map.set(r.id, r.serverSet);
     overwrittenCount++;
+  }
+
+  for (const id of serverDeletes) map.delete(id);
+
+  return { next: Array.from(map.values()), overwrittenCount };
+}
+
+/**
+ * Phase 10.2: ShoppingList 用 reconcile。
+ * SYSTEM_PROTECTED でサーバーが拒否した場合は serverList を採用 (overwrittenCount に算入)。
+ */
+export function reconcileLists(params: {
+  local: ShoppingList[];
+  serverChanges: ShoppingListDTO[];
+  serverDeletes: string[];
+  rejected: ListsSyncPushResponse["rejected"];
+}): { next: ShoppingList[]; overwrittenCount: number } {
+  const { local, serverChanges, serverDeletes, rejected } = params;
+
+  const map = new Map<string, ShoppingList>(local.map((l) => [l.id, l]));
+
+  for (const s of serverChanges) {
+    const l = map.get(s.id);
+    if (!l || l.updatedAt < s.updatedAt) {
+      map.set(s.id, s);
+    }
+  }
+
+  let overwrittenCount = 0;
+  for (const r of rejected) {
+    if (r.serverList) {
+      map.set(r.id, r.serverList);
+      overwrittenCount++;
+    }
   }
 
   for (const id of serverDeletes) map.delete(id);
