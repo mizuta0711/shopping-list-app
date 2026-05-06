@@ -6,13 +6,15 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { useShoppingStore } from "../stores/shoppingStore";
 import { useSetsStore } from "../stores/setsStore";
 import { useListsStore } from "../stores/listsStore";
 import { useActiveListStore } from "../stores/activeListStore";
+import { useSyncStore } from "@/features/sync/stores/syncStore";
+import { useSyncOrchestrator } from "@/components/providers/SyncProvider";
 import {
   exportStateToJson,
   importStateFromFile,
@@ -22,7 +24,8 @@ import { AccountSection } from "./AccountSection";
 export function SettingsView() {
   const reset = useShoppingStore((state) => state.reset);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
+  const orchestrator = useSyncOrchestrator();
   const isLoggedIn = sessionStatus === "authenticated";
 
   const handleExport = useCallback(() => {
@@ -54,17 +57,41 @@ export function SettingsView() {
     [],
   );
 
-  const handleReset = useCallback(() => {
-    const confirmed = window.confirm(
-      "すべてのデータを削除します。この操作は取り消せません。続行しますか？",
-    );
+  const handleReset = useCallback(async () => {
+    const isLoggedInNow = sessionStatus === "authenticated";
+    const message = isLoggedInNow
+      ? "すべてのデータを削除し、ログアウトします。この操作は取り消せません。続行しますか？"
+      : "すべてのデータを削除します。この操作は取り消せません。続行しますか？";
+    const confirmed = window.confirm(message);
     if (!confirmed) return;
+
+    // 進行中の同期を打ち切る（reset 後のサーバー再 pull や 401 ループ回避）
+    orchestrator?.stop();
+
+    // 全ストア reset + hasMerged フラグ削除
     reset();
     useSetsStore.getState().reset();
     useListsStore.getState().reset();
     useActiveListStore.getState().reset();
-    toast.success("すべてのデータを削除しました");
-  }, [reset]);
+    useSyncStore.getState().reset();
+    const userId = session?.user?.id;
+    if (userId) {
+      try {
+        window.localStorage.removeItem(`sync:hasMerged:${userId}`);
+      } catch {
+        // ignore
+      }
+    }
+
+    if (isLoggedInNow) {
+      // ログイン中なら signOut してログイン画面へ
+      await signOut({ redirect: false });
+      toast.success("すべてのデータを削除し、ログアウトしました");
+      window.location.href = "/login";
+    } else {
+      toast.success("すべてのデータを削除しました");
+    }
+  }, [reset, sessionStatus, session?.user?.id, orchestrator]);
 
   return (
     <main className="mx-auto flex h-[100dvh] max-w-md flex-col bg-white">
