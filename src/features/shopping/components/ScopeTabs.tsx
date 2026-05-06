@@ -22,7 +22,11 @@ export const ScopeTabs = memo<Props>(function ScopeTabs({
   onChange,
 }) {
   return (
-    <div role="tablist" className="flex border-b border-gray-200">
+    <div
+      role="tablist"
+      aria-label="表示期間"
+      className="flex border-b border-gray-200"
+    >
       {TABS.map(({ scope, label }) => {
         const count = scope === "TODAY" ? todayCount : laterCount;
         const isActive = active === scope;
